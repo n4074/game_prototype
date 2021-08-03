@@ -1,5 +1,9 @@
 
+use std::f32::consts::PI;
+
 use bevy::prelude::*;
+
+use log::{debug};
 pub struct CameraControlPlugin;
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug, SystemLabel)]
@@ -41,7 +45,7 @@ impl Default for Keys {
 impl Default for CameraController { 
     fn default() -> CameraController {
         CameraController {
-            sensitivity: 0.1,
+            sensitivity: 10f32,
             keys: Default::default()
         }
     }
@@ -64,34 +68,64 @@ fn camera_movement(
 ) {
     for (controller, mut transform) in q.iter_mut() {
         let current_transform = transform.clone();
-        //println!("{:?}", transform);
+        let rate = controller.sensitivity * time.delta().as_secs_f32();
+        let rot_rate = PI * time.delta().as_secs_f32();
+
+        let mut forward = current_transform.local_z();
+        forward.y = 0f32;
+        forward.normalize();
+
+        let mut move_direction =- bevy::math::Quat::IDENTITY;
+
         if keyboard.pressed(controller.keys.pan_left) {
-            transform.translation -= current_transform.rotation * Vec3::X * controller.sensitivity
+            transform.translation -= Vec3::X * rate;
         }
 
         if keyboard.pressed(controller.keys.pan_right) {
-            transform.translation += current_transform.rotation * Vec3::X * controller.sensitivity
+            transform.translation += Vec3::X * forward * rate;
+            debug!("{:?}", forward * rate);
         }
 
         if keyboard.pressed(controller.keys.pan_forward) {
-            transform.translation += current_transform.rotation * Vec3::Z * controller.sensitivity
+            transform.translation -= forward * rate;
         }
 
         if keyboard.pressed(controller.keys.pan_backward) {
-            transform.translation -= current_transform.rotation * Vec3::Z * controller.sensitivity
+            transform.translation += forward * rate;
         }
 
         if keyboard.pressed(controller.keys.pan_up) {
-            transform.translation += current_transform.rotation * Vec3::Y * controller.sensitivity
+            transform.translation += Vec3::Y * rate;
         }
 
         if keyboard.pressed(controller.keys.pan_down) {
-            transform.translation -= current_transform.rotation * Vec3::Y * controller.sensitivity
+            transform.translation -= Vec3::Y * rate;
         }
 
-        if keyboard.just_pressed(KeyCode::D) {
-            println!("{:?}:{:?}", "just_pressed", time.delta());
+        if keyboard.pressed(controller.keys.rot_left) {
+            let mut cur = transform.clone();
+            transform.rotate(Quat::from_rotation_y(rot_rate))
         }
+
+        if keyboard.pressed(controller.keys.rot_right) {
+            let mut cur = transform.clone();
+            transform.rotate(Quat::from_rotation_y(-rot_rate));
+        }
+
+        if keyboard.just_pressed(KeyCode::X) {
+            let mut rot_vec = -current_transform.local_z();
+            rot_vec.y = 0f32;
+            rot_vec.normalize();
+
+            debug!("{:?}", f32::atan2(forward.x, forward.z));
+            debug!("{:?}", forward.angle_between(Vec3::Z));
+
+            debug!("loc: {:?}", current_transform.translation);
+            debug!("{:?}", rot_vec);
+        }
+
+
+        
     }
 
 

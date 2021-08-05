@@ -7,6 +7,7 @@ edition = "2018"
 
 [dependencies]
 bevy = { version = "0.5", features = ["dynamic"] }
+bevy_rapier3d = "*"
 bevy_mod_picking = { version = "0.4" }
 log = "*"
 env_logger = "*"

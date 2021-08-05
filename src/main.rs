@@ -2,12 +2,11 @@
 use bevy::prelude::*;
 
 use bevy_mod_picking::*;
-
 use log::debug;
+use camera::CameraControlPlugin;
 
 mod camera;
-
-use camera::CameraControlPlugin;
+mod physics;
 
 fn main() {
     env_logger::init();
@@ -65,5 +64,9 @@ fn setup(
         ..Default::default()
     })
     .insert(camera::CameraController::default())
-    .insert_bundle(PickingCameraBundle::default());
+    .insert_bundle(PickingCameraBundle::default())
+    .insert_bundle(bevy_rapier3d::prelude::RigidBodyBundle::default());
+
+
+
 }

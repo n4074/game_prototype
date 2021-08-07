@@ -1,12 +1,16 @@
 #![deny(unused_must_use)]
+mod camera;
+mod physics;
+mod ship;
+mod grid;
+
 use bevy::prelude::*;
 
 use bevy_mod_picking::*;
-use log::debug;
 use camera::CameraControlPlugin;
-
-mod camera;
-mod physics;
+use physics::PhysicsPlugin;
+use ship::spawn_ship;
+use grid::GridPlugin;
 
 fn main() {
     env_logger::init();
@@ -22,6 +26,8 @@ fn main() {
         .add_plugin(PickingPlugin)
         .add_plugin(InteractablePickingPlugin)
         .add_plugin(HighlightablePickingPlugin)
+        .add_plugin(PhysicsPlugin)
+        .add_plugin(GridPlugin)
         .run();
 }
 
@@ -35,6 +41,7 @@ impl Plugin for StartupPlugin {
 
 fn setup(
     mut commands: Commands,
+    asset_server: Res<AssetServer>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
@@ -43,21 +50,34 @@ fn setup(
         material: materials.add(Color::rgb(0.3, 0.5, 0.3).into()),
         ..Default::default()
     });
+
     // cube
     commands.spawn_bundle(PbrBundle {
         mesh: meshes.add(
             Mesh::from(shape::Cube { size: 1.0 })
         ),
         material: materials.add(Color::rgb(0.8, 0.7, 0.6).into()),
-        transform: Transform::from_xyz(0.0, 0.5, 0.0),
+        transform: Transform::from_xyz(0.0, -1.5, 0.0),
         ..Default::default()
-    })
-    .insert_bundle(PickableBundle::default());
+    });
+    //.insert_bundle(PickableBundle::default())
+    //.insert_bundle(physics::RigidBodyBundle {
+    //    position: [0.0, 0.5, 0.0].into(),
+    //    ..physics::RigidBodyBundle::default()
+    //})
+    //.insert_bundle(physics::ColliderBundle {
+    //    shape: physics::ColliderShape::cuboid(0.5, 0.5, 0.5),
+    //    ..physics::ColliderBundle::default()
+    //})
+    //.insert(physics::ColliderDebugRender::with_id(1usize))
+    //.insert(physics::ColliderPositionSync::Discrete);
+
     // light
     commands.spawn_bundle(LightBundle {
         transform: Transform::from_xyz(4.0, 8.0, 4.0),
         ..Default::default()
     });
+
     // camera
     commands.spawn_bundle(PerspectiveCameraBundle {
         transform: Transform::from_xyz(0.0, 2.5, 10.0).looking_at(Vec3::ZERO, Vec3::Y),
@@ -67,6 +87,7 @@ fn setup(
     .insert_bundle(PickingCameraBundle::default())
     .insert_bundle(bevy_rapier3d::prelude::RigidBodyBundle::default());
 
-
+    spawn_ship(commands, asset_server, meshes, materials);
+    //spawn_ship(commands, meshes, materials);
 
 }

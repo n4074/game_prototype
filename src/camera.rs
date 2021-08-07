@@ -17,11 +17,11 @@ pub enum CameraControlSystem {
 }
 
 pub struct CameraController {
-    sensitivity: f32,
+    _sensitivity: f32,
     radius: f32,
     focus: Vec3,
     upside_down: bool,
-    keys: Keys,
+    _keys: Keys,
 }
 
 pub struct Keys {
@@ -55,9 +55,9 @@ impl Default for CameraController {
         CameraController {
             focus: Vec3::ZERO,
             radius: 10f32,
-            sensitivity: 10f32,
+            _sensitivity: 10f32,
             upside_down: false,
-            keys: Default::default()
+            _keys: Default::default()
         }
     }
 }

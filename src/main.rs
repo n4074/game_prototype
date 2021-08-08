@@ -3,6 +3,7 @@ mod camera;
 mod physics;
 mod ship;
 mod grid;
+mod overlay;
 
 use bevy::prelude::*;
 
@@ -11,6 +12,7 @@ use camera::CameraControlPlugin;
 use physics::PhysicsPlugin;
 use ship::spawn_ship;
 use grid::GridPlugin;
+use overlay::OverlayPlugin;
 
 fn main() {
     env_logger::init();
@@ -28,6 +30,7 @@ fn main() {
         .add_plugin(HighlightablePickingPlugin)
         .add_plugin(PhysicsPlugin)
         .add_plugin(GridPlugin)
+        .add_plugin(OverlayPlugin)
         .run();
 }
 

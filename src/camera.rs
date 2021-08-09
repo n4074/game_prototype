@@ -1,19 +1,18 @@
-
 use std::f32::consts::PI;
 
 use bevy::{
-    prelude::*,
-    input::mouse::{MouseMotion, MouseButton, MouseWheel},
     input::keyboard::KeyboardInput,
+    input::mouse::{MouseButton, MouseMotion, MouseWheel},
+    prelude::*,
     render::camera::PerspectiveProjection,
 };
 
-use log::{debug};
+use log::debug;
 pub struct CameraControlPlugin;
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug, SystemLabel)]
 pub enum CameraControlSystem {
-    CameraMovement
+    CameraMovement,
 }
 
 pub struct CameraController {
@@ -32,7 +31,7 @@ pub struct Keys {
     pan_up: KeyCode,
     pan_down: KeyCode,
     rot_left: KeyCode,
-    rot_right: KeyCode
+    rot_right: KeyCode,
 }
 
 impl Default for Keys {
@@ -50,14 +49,14 @@ impl Default for Keys {
     }
 }
 
-impl Default for CameraController { 
+impl Default for CameraController {
     fn default() -> CameraController {
         CameraController {
             focus: Vec3::ZERO,
             radius: 10f32,
             _sensitivity: 10f32,
             upside_down: false,
-            _keys: Default::default()
+            _keys: Default::default(),
         }
     }
 }
@@ -89,7 +88,11 @@ fn camera_movement(
     mut keyboard_inp: EventReader<KeyboardInput>,
     input_mouse: Res<Input<MouseButton>>,
     keys: Res<Keys>,
-    mut q: Query<(&mut CameraController, &mut Transform, &PerspectiveProjection)>
+    mut q: Query<(
+        &mut CameraController,
+        &mut Transform,
+        &PerspectiveProjection,
+    )>,
 ) {
     // change input mapping for orbit and panning here
     let orbit_button = MouseButton::Right;
@@ -120,7 +123,7 @@ fn camera_movement(
 
     let rot_rate = PI * time.delta().as_secs_f32();
 
-    let mut rotation = Quat::IDENTITY; 
+    let mut rotation = Quat::IDENTITY;
     let mut translation = Vec3::ZERO;
 
     if keyboard.pressed(keys.pan_left) {
@@ -177,7 +180,11 @@ fn camera_movement(
             let window = get_primary_window_size(&windows);
             let delta_x = {
                 let delta = rotation_move.x / window.x * std::f32::consts::PI * 2.0;
-                if pan_orbit.upside_down { -delta } else { delta }
+                if pan_orbit.upside_down {
+                    -delta
+                } else {
+                    delta
+                }
             };
             let delta_y = rotation_move.y / window.y * std::f32::consts::PI;
             let yaw = Quat::from_rotation_y(-delta_x);
@@ -209,7 +216,7 @@ fn camera_movement(
 
             //let right = transform.rotation * Vec3::X * translation.x;
             //let forward = transform.rotation * Vec3::Z * translation.z;
-            pan_orbit.focus += world_z * translation; //(right + forward) + pan_orbit.focus; 
+            pan_orbit.focus += world_z * translation; //(right + forward) + pan_orbit.focus;
             debug!("{:?}", translation);
         }
 
@@ -218,7 +225,8 @@ fn camera_movement(
             // parent = x and y rotation
             // child = z-offset
             let rot_matrix = Mat3::from_quat(transform.rotation);
-            transform.translation = pan_orbit.focus + rot_matrix.mul_vec3(Vec3::new(0.0, 0.0, pan_orbit.radius));
+            transform.translation =
+                pan_orbit.focus + rot_matrix.mul_vec3(Vec3::new(0.0, 0.0, pan_orbit.radius));
         }
     }
 }

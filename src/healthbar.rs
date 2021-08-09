@@ -1,19 +1,30 @@
 use std::f32::consts::PI;
 
-use bevy::{math::*, prelude::*, reflect::TypeUuid, render::{camera::CameraProjection, mesh::shape, pipeline::{PipelineDescriptor, RenderPipeline}, render_graph::{base, AssetRenderResourcesNode, RenderGraph}, renderer::RenderResources, shader::ShaderStages}};
+use bevy::{
+    math::*,
+    prelude::*,
+    reflect::TypeUuid,
+    render::{
+        camera::CameraProjection,
+        mesh::shape,
+        pipeline::{PipelineDescriptor, RenderPipeline},
+        render_graph::{base, AssetRenderResourcesNode, RenderGraph},
+        renderer::RenderResources,
+        shader::ShaderStages,
+    },
+};
 
-pub struct OverlayPlugin;
+pub struct HealthBarPlugin;
 
-impl Plugin for OverlayPlugin {
+impl Plugin for HealthBarPlugin {
     fn build(&self, app: &mut AppBuilder) {
-        app
-        .add_asset::<HealthBar>()
-        .add_startup_system(setup.system());
+        app.add_asset::<HealthBar>()
+            .add_startup_system(setup.system());
     }
 }
 
 #[derive(RenderResources, Default, TypeUuid)]
-#[uuid = "3bf9e364-f29d-4d6c-92cf-93298466c623"]
+#[uuid = "3bf9e364-f29d-4d6c-92cf-93298466c624"]
 struct HealthBar {
     pub colour: Color,
     pub offset: Vec3,
@@ -55,11 +66,13 @@ fn setup(
         offset: vec3(0.0, 2.0, 0.0),
     });
 
-
     // cube
     commands
         .spawn_bundle(MeshBundle {
-            mesh: meshes.add(Mesh::from(shape::Quad { size: bevy::math::vec2(2.0, 2.0), flip: false })),
+            mesh: meshes.add(Mesh::from(shape::Quad {
+                size: bevy::math::vec2(2.0, 2.0),
+                flip: false,
+            })),
             render_pipelines: RenderPipelines::from_pipelines(vec![RenderPipeline::new(
                 pipeline_handle,
             )]),

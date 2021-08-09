@@ -6,19 +6,19 @@ layout(set = 0, binding = 0) uniform CameraViewProj {
     mat4 ViewProj;
 };
 
+layout(set = 0, binding = 2) uniform CameraView {
+    mat4 View;
+};
+
 layout(set = 1, binding = 0) uniform Transform {
     mat4 Model;
 };
 
-layout(set = 2, binding = 0) uniform CameraView {
-    mat4 View;
-};
-
-layout(set = 3, binding = 0) uniform HealthBar_colour {
+layout(set = 2, binding = 2) uniform HealthBar_colour {
     vec4 colour;
 };
 
-layout(set = 3, binding = 1) uniform HealthBar_offset {
+layout(set = 2, binding = 0) uniform HealthBar_offset {
     vec3 offset;
 };
 

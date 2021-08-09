@@ -1,24 +1,24 @@
 #![deny(unused_must_use)]
 mod camera;
+mod grid;
+mod healthbar;
 mod physics;
 mod ship;
-mod grid;
-mod overlay;
 
 use bevy::prelude::*;
 
 use bevy_mod_picking::*;
 use camera::CameraControlPlugin;
+use grid::GridPlugin;
+use healthbar::HealthBarPlugin;
 use physics::PhysicsPlugin;
 use ship::spawn_ship;
-use grid::GridPlugin;
-use overlay::OverlayPlugin;
 
 fn main() {
     env_logger::init();
 
     log::debug!("Launching...");
-    
+
     App::build()
         .insert_resource(Msaa { samples: 4 })
         .add_plugins(DefaultPlugins)
@@ -30,7 +30,7 @@ fn main() {
         .add_plugin(HighlightablePickingPlugin)
         .add_plugin(PhysicsPlugin)
         .add_plugin(GridPlugin)
-        .add_plugin(OverlayPlugin)
+        .add_plugin(HealthBarPlugin)
         .run();
 }
 
@@ -56,9 +56,7 @@ fn setup(
 
     // cube
     commands.spawn_bundle(PbrBundle {
-        mesh: meshes.add(
-            Mesh::from(shape::Cube { size: 1.0 })
-        ),
+        mesh: meshes.add(Mesh::from(shape::Cube { size: 1.0 })),
         material: materials.add(Color::rgb(0.8, 0.7, 0.6).into()),
         transform: Transform::from_xyz(0.0, -1.5, 0.0),
         ..Default::default()
@@ -82,15 +80,15 @@ fn setup(
     });
 
     // camera
-    commands.spawn_bundle(PerspectiveCameraBundle {
-        transform: Transform::from_xyz(0.0, 2.5, 10.0).looking_at(Vec3::ZERO, Vec3::Y),
-        ..Default::default()
-    })
-    .insert(camera::CameraController::default())
-    .insert_bundle(PickingCameraBundle::default())
-    .insert_bundle(bevy_rapier3d::prelude::RigidBodyBundle::default());
+    commands
+        .spawn_bundle(PerspectiveCameraBundle {
+            transform: Transform::from_xyz(0.0, 2.5, 10.0).looking_at(Vec3::ZERO, Vec3::Y),
+            ..Default::default()
+        })
+        .insert(camera::CameraController::default())
+        .insert_bundle(PickingCameraBundle::default())
+        .insert_bundle(bevy_rapier3d::prelude::RigidBodyBundle::default());
 
     spawn_ship(commands, asset_server, meshes, materials);
     //spawn_ship(commands, meshes, materials);
-
 }

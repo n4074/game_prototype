@@ -16,9 +16,8 @@ pub struct GridPlugin;
 
 impl Plugin for GridPlugin {
     fn build(&self, app: &mut AppBuilder) {
-        app
-        .add_asset::<MyMaterialX>()
-        .add_startup_system(setup.system());
+        app.add_asset::<MyMaterialX>()
+            .add_startup_system(setup.system());
     }
 }
 
@@ -68,7 +67,10 @@ fn setup(
     // cube
     commands
         .spawn_bundle(MeshBundle {
-            mesh: meshes.add(Mesh::from(shape::Quad { size: bevy::math::vec2(2.0, 2.0), flip: false })),
+            mesh: meshes.add(Mesh::from(shape::Quad {
+                size: bevy::math::vec2(2.0, 2.0),
+                flip: false,
+            })),
             render_pipelines: RenderPipelines::from_pipelines(vec![RenderPipeline::new(
                 pipeline_handle,
             )]),

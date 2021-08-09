@@ -21,20 +21,17 @@ pub fn spawn_ship(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-
-    commands.spawn_bundle(
-        ShipBundle {
-            rigid_body: physics::RigidBodyBundle {
-              position: [0.0, 0.5, 0.0].into(),
-              ..physics::RigidBodyBundle::default()
-            },
-            collider: physics::ColliderBundle {
-                shape: physics::ColliderShape::cuboid(0.5, 0.5, 0.5),
-                ..physics::ColliderBundle::default()
-            },
-            ..Default::default()
-        }
-    );
+    commands.spawn_bundle(ShipBundle {
+        rigid_body: physics::RigidBodyBundle {
+            position: [0.0, 0.5, 0.0].into(),
+            ..physics::RigidBodyBundle::default()
+        },
+        collider: physics::ColliderBundle {
+            shape: physics::ColliderShape::cuboid(0.5, 0.5, 0.5),
+            ..physics::ColliderBundle::default()
+        },
+        ..Default::default()
+    });
     //let tube = asset_server.load("models/tube.gltf#Meshx0/Primitive1");
 
     //commands.spawn_bundle(PbrBundle {

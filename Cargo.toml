@@ -5,9 +5,15 @@ edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[workspaces]
+members = [ 
+  "draw_textures"
+]
+
 [dependencies]
 bevy = { version = "0.5", features = ["dynamic"] }
 bevy_rapier3d = "*"
 bevy_mod_picking = { version = "0.4" }
+bevy_prototype_lyon = "*"
 log = "*"
 env_logger = "*"

@@ -1,7 +1,7 @@
 #![deny(unused_must_use)]
 mod camera;
 mod grid;
-mod healthbar;
+mod overlay;
 mod physics;
 mod ship;
 
@@ -10,7 +10,7 @@ use bevy::prelude::*;
 use bevy_mod_picking::*;
 use camera::CameraControlPlugin;
 use grid::GridPlugin;
-use healthbar::HealthBarPlugin;
+use overlay::HealthBarPlugin;
 use physics::PhysicsPlugin;
 use ship::spawn_ship;
 
@@ -48,19 +48,13 @@ fn setup(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    commands.spawn_bundle(PbrBundle {
-        mesh: meshes.add(Mesh::from(shape::Plane { size: 5.0 })),
-        material: materials.add(Color::rgb(0.3, 0.5, 0.3).into()),
-        ..Default::default()
-    });
-
     // cube
-    commands.spawn_bundle(PbrBundle {
-        mesh: meshes.add(Mesh::from(shape::Cube { size: 1.0 })),
-        material: materials.add(Color::rgb(0.8, 0.7, 0.6).into()),
-        transform: Transform::from_xyz(0.0, -1.5, 0.0),
-        ..Default::default()
-    });
+    //commands.spawn_bundle(PbrBundle {
+    //    mesh: meshes.add(Mesh::from(shape::Cube { size: 1.0 })),
+    //    material: materials.add(Color::rgb(0.8, 0.7, 0.6).into()),
+    //    transform: Transform::from_xyz(0.0, -1.5, 0.0),
+    //    ..Default::default()
+    //});
     //.insert_bundle(PickableBundle::default())
     //.insert_bundle(physics::RigidBodyBundle {
     //    position: [0.0, 0.5, 0.0].into(),
@@ -89,6 +83,6 @@ fn setup(
         .insert_bundle(PickingCameraBundle::default())
         .insert_bundle(bevy_rapier3d::prelude::RigidBodyBundle::default());
 
-    spawn_ship(commands, asset_server, meshes, materials);
+    //spawn_ship(commands, asset_server, meshes, materials);
     //spawn_ship(commands, meshes, materials);
 }

@@ -41,7 +41,7 @@ fn setup(
 
     let pipeline_handle = pipelines.add(PipelineDescriptor::default_config(ShaderStages {
         vertex: asset_server.load::<Shader, _>("shaders/grid.vert"),
-        fragment: Some(asset_server.load::<Shader, _>("shaders/healthbar.frag")),
+        fragment: Some(asset_server.load::<Shader, _>("shaders/grid.frag")),
     }));
 
     // Add an AssetRenderResourcesNode to our Render Graph. This will bind MyMaterial resources to

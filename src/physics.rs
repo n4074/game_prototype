@@ -25,12 +25,12 @@ pub fn setup_physics(mut commands: Commands, mut config: ResMut<RapierConfigurat
     let ground_height = 0.1;
     let collider = ColliderBundle {
         shape: ColliderShape::cuboid(ground_size, ground_height, ground_size),
-        position: [0.0, -ground_height - 10.0, 0.0].into(),
+        position: [0.0, -ground_height - 40.0, 0.0].into(),
         ..ColliderBundle::default()
     };
 
-    //commands
-    //    .spawn_bundle(collider)
-    //    .insert(ColliderDebugRender::default())
-    //    .insert(ColliderPositionSync::Discrete);
+    commands
+        .spawn_bundle(collider)
+        .insert(ColliderDebugRender::default())
+        .insert(ColliderPositionSync::Discrete);
 }

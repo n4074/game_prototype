@@ -48,24 +48,34 @@ fn setup(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    // cube
-    //commands.spawn_bundle(PbrBundle {
-    //    mesh: meshes.add(Mesh::from(shape::Cube { size: 1.0 })),
-    //    material: materials.add(Color::rgb(0.8, 0.7, 0.6).into()),
-    //    transform: Transform::from_xyz(0.0, -1.5, 0.0),
-    //    ..Default::default()
-    //});
-    //.insert_bundle(PickableBundle::default())
-    //.insert_bundle(physics::RigidBodyBundle {
-    //    position: [0.0, 0.5, 0.0].into(),
-    //    ..physics::RigidBodyBundle::default()
-    //})
-    //.insert_bundle(physics::ColliderBundle {
-    //    shape: physics::ColliderShape::cuboid(0.5, 0.5, 0.5),
-    //    ..physics::ColliderBundle::default()
-    //})
-    //.insert(physics::ColliderDebugRender::with_id(1usize))
-    //.insert(physics::ColliderPositionSync::Discrete);
+    for i in 0..5 {
+        for j in 0..5 {
+            for k in 0..5 {
+
+                let transform = Transform::from_xyz(-i as f32 * 3.0, j as f32 * 3.0, k as f32 * 3.0);
+
+                commands.spawn_bundle(PbrBundle {
+                    mesh: meshes.add(Mesh::from(shape::Cube { size: 1.0 })),
+                    material: materials.add(Color::rgb(0.8, 0.7, 0.6).into()),
+                    transform,
+                    ..Default::default()
+                })
+                //.insert_bundle(PickableBundle::default())
+                .insert_bundle(physics::RigidBodyBundle {
+                    //position: [transform.translation.x, transform., 0.0].into(),
+                    position: transform.translation.into(),
+                    ..physics::RigidBodyBundle::default()
+                })
+                .insert_bundle(physics::ColliderBundle {
+                    shape: physics::ColliderShape::cuboid(0.5, 0.5, 0.5),
+                    ..physics::ColliderBundle::default()
+                })
+                .insert(physics::ColliderDebugRender::with_id(1usize))
+                .insert(physics::ColliderPositionSync::Discrete);
+            }
+
+        }
+    }
 
     // light
     commands.spawn_bundle(LightBundle {

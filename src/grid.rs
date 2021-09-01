@@ -24,10 +24,6 @@ impl Plugin for GridPlugin {
     }
 }
 
-#[derive(RenderResources, Default, TypeUuid)]
-#[uuid = "3bf9e364-f29d-4d6c-92cf-93298466c6ff"]
-struct OverlayShading;
-
 fn setup(
     mut commands: Commands,
     asset_server: ResMut<AssetServer>,

@@ -85,7 +85,6 @@ fn camera_movement(
     windows: Res<Windows>,
     mut ev_motion: EventReader<MouseMotion>,
     mut ev_scroll: EventReader<MouseWheel>,
-    mut keyboard_inp: EventReader<KeyboardInput>,
     input_mouse: Res<Input<MouseButton>>,
     keys: Res<Keys>,
     mut q: Query<(
@@ -97,7 +96,6 @@ fn camera_movement(
     // change input mapping for orbit and panning here
     let orbit_button = MouseButton::Right;
     let pan_button = MouseButton::Left;
-    let sensitivity = 10f32;
 
     let mut pan = Vec2::ZERO;
     let mut rotation_move = Vec2::ZERO;

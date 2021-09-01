@@ -4,6 +4,8 @@ use bevy_mod_picking::*;
 use crate::physics;
 use crate::overlay;
 
+pub struct Selected;
+
 #[derive(Bundle, Default)]
 struct ShipBundle {
     collider_render: physics::ColliderDebugRender,
@@ -20,7 +22,9 @@ pub fn spawn_ship(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut colour_materials: ResMut<Assets<ColorMaterial>>,
+    mut healthbar_materials: ResMut<Assets<overlay::HealthBar>>,
+    mut billboard_materials: ResMut<Assets<overlay::Billboard>>,
 ) {
     let ship = commands
         .spawn_bundle(ShipBundle {
@@ -29,11 +33,13 @@ pub fn spawn_ship(
                 ..physics::RigidBodyBundle::default()
             },
             collider: physics::ColliderBundle {
-                shape: physics::ColliderShape::cuboid(0.5, 0.5, 0.5),
+                shape: physics::ColliderShape::cuboid(1.0, 1.0, 1.0),
                 ..physics::ColliderBundle::default()
             },
             ..Default::default()
-        }).id();
+        })
+        .insert(Selected)
+        .id();
 
-    //overlay::attach_ship_overlay(ship, commands, , commands, symbols, meshes, colour_materials, billboard_materials, healthbar_materials, overlay_materials)
+    overlay::attach_ship_overlay(ship, commands, asset_server, colour_materials, billboard_materials, healthbar_materials);
 }

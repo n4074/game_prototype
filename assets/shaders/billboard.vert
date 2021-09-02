@@ -19,24 +19,13 @@ layout(set = 1, binding = 0) uniform Transform {
 };
 
 layout(set = 2, binding = 0) uniform Billboard_offset {
-    vec3 offset;
+    mat4 offset;
 };
 
 void main() {
     mat4 Proj = ViewProj * View; // not sure why View is already inverse
-    mat4 myModel = mat4(
-        Model[0][0], 0.0, 0.0, Model[0][3],
-        0.0, Model[1][1], 0.0, Model[1][3],
-        0.0, 0.0, Model[2][2], Model[2][3],
-        0.0, 0.0, 0.0, 1.0);
-
-    //gl_Position = Proj * 
-    //    (inverse(View) * Model * vec4(0.0, 0.0, 0.0, 1.0) 
-    //        + vec4(Vertex_Position.x,Vertex_Position.y, 0.0, 0.0) + vec4(offset, 0.0));
-
-    gl_Position = Proj * 
-        (inverse(View) * Model * vec4(0.0, 0.0, 0.0, 1.0) +
-            (myModel * vec4(Vertex_Position.x,Vertex_Position.y, 0.0, 1.0)) + vec4(offset, 0.0));
+    vec4 viewOrigin = inverse(View) * Model * vec4(0.0, 0.0, 0.0, 1.0);
+    gl_Position = Proj * (viewOrigin + offset * vec4(Vertex_Position.x,Vertex_Position.y, 0.0, 1.0));
 
     v_Uv = Vertex_Uv;
 }

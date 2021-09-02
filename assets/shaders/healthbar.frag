@@ -4,7 +4,7 @@ layout(location = 0) in vec2 v_Uv;
 
 layout(location = 0) out vec4 colour;
 
-layout(set = 3, binding = 0) uniform HealthBar_fill {
+layout(set = 2, binding = 1) uniform Overlay_healthbar_fill {
     float fill;
 };
 

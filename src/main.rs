@@ -4,6 +4,7 @@ mod movement;
 mod overlay;
 mod physics;
 mod ship;
+mod selection;
 
 use bevy::prelude::*;
 
@@ -12,6 +13,7 @@ use camera::CameraControlPlugin;
 use movement::PlayerControllerPlugin;
 use overlay::{HealthBarPlugin};
 use physics::PhysicsPlugin;
+use selection::SelectionPlugin;
 use ship::spawn_ship;
 
 fn main() {
@@ -31,6 +33,7 @@ fn main() {
         .add_plugin(PhysicsPlugin)
         .add_plugin(PlayerControllerPlugin)
         .add_plugin(HealthBarPlugin)
+        .add_plugin(SelectionPlugin)
         .run();
 }
 
@@ -45,38 +48,20 @@ impl Plugin for StartupPlugin {
 fn setup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-    mut colour_materials: ResMut<Assets<ColorMaterial>>,
-    mut billboard_materials: ResMut<Assets<overlay::Billboard>>,
-    mut healthbar_materials: ResMut<Assets<overlay::HealthBar>>,
+    mut overlay_materials: ResMut<Assets<overlay::Overlay>>,
 ) {
     for i in -5..5 {
         for j in -5..5 {
             for k in -5..5 {
 
-                let transform = Transform::from_xyz(-i as f32 * 3.0, j as f32 * 3.0, k as f32 * 3.0);
+                if i == 0 && j == 0 && k == 0 {
+                    continue;
+                }
 
-                commands.spawn_bundle(PbrBundle {
-                    mesh: meshes.add(Mesh::from(shape::Cube { size: 1.0 })),
-                    material: materials.add(Color::rgb(0.8, 0.7, 0.6).into()),
-                    transform,
-                    ..Default::default()
-                })
-                //.insert_bundle(PickableBundle::default())
-                .insert_bundle(physics::RigidBodyBundle {
-                    //position: [transform.translation.x, transform., 0.0].into(),
-                    position: transform.translation.into(),
-                    ..physics::RigidBodyBundle::default()
-                })
-                .insert_bundle(physics::ColliderBundle {
-                    shape: physics::ColliderShape::cuboid(0.5, 0.5, 0.5),
-                    ..physics::ColliderBundle::default()
-                })
-                .insert(physics::ColliderDebugRender::with_id(1usize))
-                .insert(physics::ColliderPositionSync::Discrete);
+                let transform = Transform::from_xyz(-i as f32 * 2.0, j as f32 * 2.0, k as f32 * 2.0);
+
+                spawn_ship(transform, &mut commands, &asset_server, &mut overlay_materials);
             }
-
         }
     }
 
@@ -95,7 +80,4 @@ fn setup(
         .insert(camera::CameraController::default())
         .insert_bundle(PickingCameraBundle::default())
         .insert_bundle(bevy_rapier3d::prelude::RigidBodyBundle::default());
-
-    spawn_ship(commands, asset_server, meshes, colour_materials, healthbar_materials, billboard_materials);
-    //spawn_ship(commands, meshes, materials);
 }

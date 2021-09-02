@@ -19,27 +19,25 @@ struct ShipBundle {
 }
 
 pub fn spawn_ship(
-    mut commands: Commands,
-    asset_server: Res<AssetServer>,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut colour_materials: ResMut<Assets<ColorMaterial>>,
-    mut healthbar_materials: ResMut<Assets<overlay::HealthBar>>,
-    mut billboard_materials: ResMut<Assets<overlay::Billboard>>,
+    transform: Transform,
+    commands: &mut Commands,
+    asset_server: &AssetServer,
+    overlay_materials: &mut Assets<overlay::Overlay>,
 ) {
     let ship = commands
         .spawn_bundle(ShipBundle {
             rigid_body: physics::RigidBodyBundle {
-                position: [0.0, 0.5, 0.0].into(),
+                //position: [0.0, 0.5, 0.0].into(),
+                position: (transform.translation, transform.rotation).into(),
                 ..physics::RigidBodyBundle::default()
             },
             collider: physics::ColliderBundle {
-                shape: physics::ColliderShape::cuboid(1.0, 1.0, 1.0),
+                shape: physics::ColliderShape::cuboid(0.5, 0.5, 0.5),
                 ..physics::ColliderBundle::default()
             },
             ..Default::default()
         })
-        .insert(Selected)
         .id();
 
-    overlay::attach_ship_overlay(ship, commands, asset_server, colour_materials, billboard_materials, healthbar_materials);
+    overlay::attach_ship_overlay(ship, commands, asset_server, overlay_materials);
 }

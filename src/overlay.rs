@@ -70,7 +70,8 @@ pub fn attach_ship_overlay(
         .spawn_bundle(MeshBundle {
             mesh: SIMPLE_QUAD_MESH_HANDLE.typed(),
             render_pipelines: RenderPipelines::from_handles(
-                &[ICON_PIPELINE_HANDLE.typed(), HEALTHBAR_PIPELINE_HANDLE.typed()]
+                //&[ICON_PIPELINE_HANDLE.typed(), HEALTHBAR_PIPELINE_HANDLE.typed()]
+                &[]
             ),
             visible: Visible {
                 is_transparent: true,

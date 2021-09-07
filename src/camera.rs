@@ -164,7 +164,7 @@ fn camera_movement(
         rotation *= Quat::from_rotation_y(-rot_rate);
     }
 
-    for (mut pan_orbit, mut transform, mut projection) in q.iter_mut() {
+    for (mut pan_orbit, mut transform, projection) in q.iter_mut() {
         if orbit_button_changed {
             // only check for upside down when orbiting started or ended this frame
             // if the camera is "upside" down, panning horizontally would be inverted, so invert the input to make it correct

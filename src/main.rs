@@ -47,23 +47,29 @@ impl Plugin for StartupPlugin {
 
 fn setup(
     mut commands: Commands,
-    asset_server: Res<AssetServer>,
+    mut asset_server: ResMut<AssetServer>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
     mut overlay_materials: ResMut<Assets<overlay::Overlay>>,
 ) {
-    for i in -5..5 {
-        for j in -5..5 {
-            for k in -5..5 {
+    for i in -3..3 {
+        for j in -3..3 {
+            for k in -3..3 {
 
                 if i == 0 && j == 0 && k == 0 {
                     continue;
                 }
 
-                let transform = Transform::from_xyz(-i as f32 * 2.0, j as f32 * 2.0, k as f32 * 2.0);
+                let transform = Transform::from_xyz(-i as f32 * 1.001, j as f32 * 1.001, k as f32 * 1.001);
 
-                spawn_ship(transform, &mut commands, &asset_server, &mut overlay_materials);
+                spawn_ship(transform, &mut commands, &mut asset_server, &mut overlay_materials);
             }
         }
     }
+
+
+    let transform = Transform::from_xyz(5.0, -0.5, -0.5);
+
+    spawn_ship(transform, &mut commands, &mut asset_server, &mut overlay_materials);
 
     // light
     commands.spawn_bundle(LightBundle {
@@ -80,4 +86,19 @@ fn setup(
         .insert(camera::CameraController::default())
         .insert_bundle(PickingCameraBundle::default())
         .insert_bundle(bevy_rapier3d::prelude::RigidBodyBundle::default());
+
+    let cube_handle = asset_server.load("models/houdini_cube/cube.gltf#Mesh0/Primitive0");
+
+     // You can also add assets directly to their Assets<T> storage:
+    let material_handle = materials.add(StandardMaterial {
+        base_color: Color::rgb(0.8, 0.7, 0.6),
+        ..Default::default()
+    });
+
+    commands.spawn_bundle(PbrBundle {
+        mesh: cube_handle,
+        //material: material_handle.clone(),
+        transform: Transform::from_xyz(10.0, 0.0, 0.0),
+        ..Default::default()
+    });
 }

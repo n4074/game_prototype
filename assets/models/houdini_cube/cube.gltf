@@ -6,28 +6,28 @@
 	"accessors":[
 		{
 			"bufferView":0,
-			"componentType":5121,
-			"count":36,
+			"componentType":5123,
+			"count":1728,
 			"type":"SCALAR",
 			"min":[0
 			],
-			"max":[35
+			"max":[1727
 			]
 		},
 		{
 			"bufferView":1,
 			"componentType":5126,
-			"count":36,
+			"count":1728,
 			"type":"VEC3",
-			"min":[-0.5,-0.5,-0.5
+			"min":[-1.5,-0.5,-1.5
 			],
-			"max":[0.5,0.5,0.5
+			"max":[1.5,0.5,1.5
 			]
 		},
 		{
 			"bufferView":2,
 			"componentType":5126,
-			"count":36,
+			"count":1728,
 			"type":"VEC2",
 			"min":[0,0
 			],
@@ -37,43 +37,43 @@
 		{
 			"bufferView":3,
 			"componentType":5126,
-			"count":36,
+			"count":1728,
 			"type":"VEC3",
-			"min":[-1,-1,-1
+			"min":[-1,-0.999767661,-1
 			],
-			"max":[1,1,1
+			"max":[1,0.999767601,1
 			]
 		}
 	],
 	"buffers":[
 		{
 			"uri":"cube_data.bin",
-			"byteLength":1188,
+			"byteLength":58752,
 			"name":"main_buffer"
 		}
 	],
 	"bufferViews":[
 		{
 			"buffer":0,
-			"byteLength":36,
+			"byteLength":3456,
 			"target":34963
 		},
 		{
 			"buffer":0,
-			"byteOffset":36,
-			"byteLength":432,
+			"byteOffset":3456,
+			"byteLength":20736,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteOffset":468,
-			"byteLength":288,
+			"byteOffset":24192,
+			"byteLength":13824,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteOffset":756,
-			"byteLength":432,
+			"byteOffset":38016,
+			"byteLength":20736,
 			"target":34962
 		}
 	],

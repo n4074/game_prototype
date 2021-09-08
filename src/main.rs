@@ -61,15 +61,14 @@ fn setup(
 
                 let transform = Transform::from_xyz(-i as f32 * 1.001, j as f32 * 1.001, k as f32 * 1.001);
 
-                spawn_ship(transform, &mut commands, &mut asset_server, &mut overlay_materials);
+                spawn_ship(transform, &mut commands, &mut asset_server, &mut overlay_materials, &mut materials);
             }
         }
     }
 
-
     let transform = Transform::from_xyz(5.0, -0.5, -0.5);
 
-    spawn_ship(transform, &mut commands, &mut asset_server, &mut overlay_materials);
+    spawn_ship(transform, &mut commands, &mut asset_server, &mut overlay_materials, &mut materials);
 
     // light
     commands.spawn_bundle(LightBundle {

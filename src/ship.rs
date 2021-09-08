@@ -25,8 +25,14 @@ pub fn spawn_ship(
     commands: &mut Commands,
     asset_server: &mut AssetServer,
     overlay_materials: &mut Assets<overlay::Overlay>,
+    materials: &mut Assets<StandardMaterial>,
 ) {
     let cube_handle = asset_server.load("models/houdini_cube/cube.gltf#Mesh0/Primitive0");
+
+    let material_handle = materials.add(StandardMaterial {
+        base_color: Color::rgb(0.8, 0.7, 0.6),
+        ..Default::default()
+    });
 
     let ship = commands
         .spawn_bundle(ShipBundle {
@@ -41,6 +47,7 @@ pub fn spawn_ship(
             },
             pbr_bundle: PbrBundle {
                 mesh: cube_handle,
+                material: material_handle,
                 ..Default::default()
             },
             ..Default::default()

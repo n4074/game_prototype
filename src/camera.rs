@@ -95,7 +95,7 @@ fn camera_movement(
 ) {
     // change input mapping for orbit and panning here
     let orbit_button = MouseButton::Right;
-    let pan_button = MouseButton::Left;
+    let pan_button = MouseButton::Other(5);
 
     let mut pan = Vec2::ZERO;
     let mut rotation_move = Vec2::ZERO;
@@ -215,7 +215,6 @@ fn camera_movement(
             //let right = transform.rotation * Vec3::X * translation.x;
             //let forward = transform.rotation * Vec3::Z * translation.z;
             pan_orbit.focus += world_z * translation; //(right + forward) + pan_orbit.focus;
-            debug!("{:?}", translation);
         }
 
         if any {

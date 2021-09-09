@@ -31,6 +31,6 @@ pub fn setup_physics(mut commands: Commands, mut config: ResMut<RapierConfigurat
 
     commands
         .spawn_bundle(collider)
-        .insert(ColliderDebugRender::default())
+        .insert(ColliderDebugRender::with_id(1))
         .insert(ColliderPositionSync::Discrete);
 }

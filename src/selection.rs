@@ -20,20 +20,19 @@ use log::debug;
 pub struct SelectionPlugin;
 pub struct FrustumDebug;
 
-#[derive(Default, Debug)]
-pub struct DragStart(Option<Vec2>);
-
-//impl Default for DragStart {
-//    fn default() -> Self {
-//        DragStart(None)
-//    }
-//}
+#[derive(Default, Debug, Copy, Clone)]
+pub struct DragCoords {
+    start: Option<Vec2>,
+    end: Option<Vec2>
+}
 
 impl Plugin for SelectionPlugin {
     fn build(&self, app: &mut AppBuilder) {
         app.add_system(selection.system())
             .add_system(drag_selection.system())
-            .insert_resource(DragStart::default());
+            .add_system(debug_draw_frustum.system())
+            .insert_resource(DragCoords::default())
+            .insert_resource(Option::<ConvexPolyhedron>::default());
     }
 }
 
@@ -51,168 +50,143 @@ fn selection(mut commands: Commands, mut events: EventReader<PickingEvent>) {
     }
 }
 
-fn screenspace_ray(
-    screen_coords: Vec2,
-    windows: &Res<Windows>,
-    camera: &Camera,
-    camera_transform: &GlobalTransform,
-) -> Option<bevy_mod_raycast::Ray3d> {
-    //let cursor_position = windows.get_primary().unwrap().cursor_position().unwrap();
-    // store world space starting ray
-    let ray = bevy_mod_raycast::Ray3d::from_screenspace(
-        screen_coords,
-        &windows,
-        camera,
-        camera_transform,
-    );
-    ray
-}
-
-fn create_frustum() -> Mesh {
-    let mut mesh = Mesh::new(bevy::render::pipeline::PrimitiveTopology::TriangleList);
-    mesh.set_attribute(
-        Mesh::ATTRIBUTE_POSITION,
-        vec![[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [1.0, 1.0, 0.0]],
-    );
-    mesh.set_attribute(
-        Mesh::ATTRIBUTE_NORMAL,
-        vec![[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [1.0, 1.0, 0.0]],
-    );
-    mesh.set_attribute(
-        Mesh::ATTRIBUTE_UV_0,
-        vec![[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [1.0, 1.0, 0.0]],
-    );
-    mesh.set_indices(Some(bevy::render::mesh::Indices::U32(vec![0, 1, 2])));
-    mesh
-}
-
 fn drag_selection(
     mut commands: Commands,
     windows: Res<Windows>,
     input_mouse: Res<Input<MouseButton>>,
     query_pipeline: Res<QueryPipeline>,
     collider_query: QueryPipelineColliderComponentsQuery,
-    mut drag_start: ResMut<DragStart>,
+    mut drag: Local<DragCoords>,
     q: Query<(&Camera, &GlobalTransform, &PerspectiveProjection)>,
     mut deselect: Query<(Entity, With<crate::ship::Selected>)>,
     mut frustum_debug: Query<(Entity, With<FrustumDebug>)>,
 ) {
-    let cursor_position = windows.get_primary().unwrap().cursor_position();
+    let cursor_position = windows.get_primary().and_then(|w| w.cursor_position());
 
     if input_mouse.just_pressed(MouseButton::Left) {
-        drag_start.0 = cursor_position;
-    } else if input_mouse.just_released(MouseButton::Left) {
+        drag.start = cursor_position; 
+    } 
+    
+    if input_mouse.pressed(MouseButton::Left) {
+        drag.end = cursor_position;
+    } 
+    
+    if input_mouse.just_released(MouseButton::Left) {
 
-        let drag_start = drag_start.0.unwrap();
-        let drag_end = cursor_position.unwrap();
+        if let DragCoords { start: Some(start), end: Some(end) } = *drag {
+            if start.cmpeq(end).any() {
+                // start and end coords should not share x or y coords
+                return;
+            }
 
-        if drag_start.x == drag_end.x || drag_start.y == drag_end.y {
-            return;
+            for (entity,_) in deselect.iter_mut() {
+                commands.entity(entity).remove::<crate::ship::Selected>();
+            }
+
+            let (camera, camera_transform, projection) = q.single().unwrap();
+
+            let max = Vec2::max(start, end);
+            let min = Vec2::min(start, end);
+
+            let corners = [
+                vec2(min.x, min.y),
+                vec2(max.x, min.y),
+                vec2(max.x, max.y),
+                vec2(min.x, max.y),
+            ];
+
+            let mut points: Vec<Point<Real>> = Vec::with_capacity(8);
+
+            for (i, corner) in corners.iter().enumerate() {
+                let ray = bevy_mod_raycast::Ray3d::from_screenspace(
+                    *corner,
+                    &windows,
+                    camera,
+                    camera_transform,
+                ).expect("Failed to cast screen ray");
+
+                points.push((ray.origin() + ray.direction() * projection.near).into());
+                points.push((ray.origin() + ray.direction() * projection.far).into());
+            }
+
+            let frustum = bevy_rapier3d::prelude::ConvexPolyhedron::from_convex_mesh(points, FRUSTUM_INDICES).unwrap();
+
+            commands.insert_resource(Some(frustum.clone()));
+
+            let collider_set = QueryPipelineColliderComponentsSet(&collider_query);
+            let groups = InteractionGroups::all();
+            let filter = None;
+
+            query_pipeline.intersections_with_shape(
+                &collider_set,
+                &[0.0, 0.0, 0.0].into(), // we constructed the frustum with worldspace coordinates
+                &frustum,
+                groups,
+                filter,
+                |handle| {
+                    println!("The entity {:?} intersects our shape.", handle.entity());
+                    commands
+                        .entity(handle.entity())
+                        .insert(crate::ship::Selected);
+                    true
+                },
+            );
         }
-
-
-        for (entity,_) in deselect.iter_mut() {
-            commands.entity(entity).remove::<crate::ship::Selected>();
-        }
-
-        let screen_points = [
-            drag_start,
-            drag_end,
-            vec2(drag_start.x, drag_end.y),
-            vec2(drag_end.x, drag_start.y)
-        ];
-
-        let mut points: Vec<Point<Real>> = vec![];
-
-        let (camera, camera_transform, projection) = q.single().unwrap();
-
-        for screen_point in screen_points.iter() {
-            let ray =
-                screenspace_ray(*screen_point, &windows, camera, camera_transform).unwrap();
-            let near_point: Vec3 = ray.origin() + ray.direction() * projection.near;
-            let far_point: Vec3 = ray.origin() + ray.direction() * projection.far;
-            points.push(near_point.into());
-            points.push(far_point.into());
-        }
-
-        let frustum = bevy_rapier3d::prelude::ConvexPolyhedron::from_convex_hull(&points.clone()).unwrap();
-
-        let collider_set = QueryPipelineColliderComponentsSet(&collider_query);
-        let groups = InteractionGroups::all();
-        let filter = None;
-
-        query_pipeline.intersections_with_shape(
-            &collider_set,
-            &[0.0, 0.0, 0.0].into(), // we constructed the frustum with worldspace coordinates
-            &frustum,
-            groups,
-            filter,
-            |handle| {
-                println!("The entity {:?} intersects our shape.", handle.entity());
-                commands
-                    .entity(handle.entity())
-                    .insert(crate::ship::Selected);
-                true // Return `false` instead if we want to stop searching for other colliders that contain this point.
-            },
-        );
-
-        let (points, indices) = frustum.to_trimesh();
-
-        let collider = ColliderBundle {
-            shape: SharedShape::new(crate::physics::TriMesh::new(points, indices)),
-            collider_type: ColliderType::Sensor,
-            ..ColliderBundle::default()
-        };
-
-        for (entity, debug) in frustum_debug.iter_mut() {
-            commands.entity(entity).despawn();
-        }
-
-        commands
-            .spawn_bundle(collider)
-            .insert(FrustumDebug)
-            .insert(ColliderDebugRender::default())
-            .insert(ColliderPositionSync::Discrete);
     }
 }
 
-/* Test intersections inside of a system. */
-fn test_intersections(
-    query_pipeline: Res<QueryPipeline>,
-    collider_query: QueryPipelineColliderComponentsQuery,
+// These indices are used to form a convex polyhedron from 
+// a trimesh. Note that the 
+const FRUSTUM_INDICES: &[[u32; 3]] = &[
+                // front 
+                [0, 2, 4],
+                [0, 4, 6],
+                // bottom 
+                [0, 3, 2],
+                [0, 1, 3],
+                // left
+                [0, 7, 1],
+                [0, 6, 7],
+                // right
+                [5, 2, 3],
+                [5, 4, 2],
+                // top
+                [5, 6, 4],
+                [5, 7, 6],
+                // back
+                [5, 3, 1],
+                [5, 1, 7],
+            ];
+
+const FRUSTUM_WIREFRAME_INDICES: &[(usize, usize)] = &[
+            // near rectangle
+            (0, 2),
+            (2, 4),
+            (4, 6),
+            (6, 0),
+            // frustum edges
+            (0, 1),
+            (2, 3),
+            (4, 5),
+            (6, 7),
+            // far rectangle
+            (1, 3),
+            (3, 5),
+            (5, 7),
+            (7, 1),
+        ];
+
+fn debug_draw_frustum(
+    mut commands: Commands,
+    mut frustum: ResMut<Option<ConvexPolyhedron>>, 
+    mut lines: ResMut<bevy_prototype_debug_lines::DebugLines>,
 ) {
-    // Wrap the bevy query so it can be used by the query pipeline.
-    let collider_set = QueryPipelineColliderComponentsSet(&collider_query);
+    if let Some(frustum) = frustum.take() {
+        
+        let (points, indices) = frustum.to_trimesh();
 
-    let shape = Cuboid::new(Vec3::new(1.0, 2.0, 3.0).into());
-    let shape_pos = Isometry::new(
-        Vec3::new(0.0, 1.0, 0.0).into(),
-        Vec3::new(0.2, 0.7, 0.1).into(),
-    );
-    let groups = InteractionGroups::all();
-    let filter = None;
-
-    query_pipeline.intersections_with_shape(
-        &collider_set,
-        &shape_pos,
-        &shape,
-        groups,
-        filter,
-        |handle| {
-            println!("The entity {:?} intersects our shape.", handle.entity());
-            true // Return `false` instead if we want to stop searching for other colliders that contain this point.
-        },
-    );
-
-    let aabb = AABB::new(
-        Vec3::new(-1.0, -2.0, -3.0).into(),
-        Vec3::new(1.0, 2.0, 3.0).into(),
-    );
-    query_pipeline.colliders_with_aabb_intersecting_aabb(&aabb, |handle| {
-        println!(
-            "The entity {:?} has an AABB intersecting our test AABB",
-            handle.entity()
-        );
-        true // Return `false` instead if we want to stop searching for other colliders that contain this point.
-    });
+        for (start, end) in FRUSTUM_WIREFRAME_INDICES {
+            lines.line(points[*start].into(), points[*end].into(), 5.0)
+        }
+    }
 }

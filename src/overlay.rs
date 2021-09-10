@@ -17,6 +17,7 @@ impl Plugin for HealthBarPlugin {
     fn build(&self, app: &mut AppBuilder) {
         app
             .add_asset::<Overlay>()
+            .add_system(toggle_overlay_global.system())
             .add_startup_system(setup.system());
     }
 }
@@ -46,6 +47,19 @@ fn setup(
     }));
 }
 
+pub fn toggle_overlay_global(
+    mut parent_ships: Query<(&Children, Option<&crate::ship::Selected>)>,
+    mut child_overlay: Query<(&mut Visible, With<Handle<Overlay>>)>,
+) {
+    for (children, selected) in parent_ships.iter_mut() {
+        for &child in children.iter() {
+            let (mut visible, _) = child_overlay.get_mut(child).expect("Failed to get visible");
+            visible.is_visible = selected.is_some();
+            
+        }
+    }
+}
+
 pub fn attach_ship_overlay(
     ship: Entity, 
     commands: &mut Commands, 
@@ -71,9 +85,10 @@ pub fn attach_ship_overlay(
             mesh: SIMPLE_QUAD_MESH_HANDLE.typed(),
             render_pipelines: RenderPipelines::from_handles(
                 //&[ICON_PIPELINE_HANDLE.typed(), HEALTHBAR_PIPELINE_HANDLE.typed()]
-                &[]
+                &[ICON_PIPELINE_HANDLE.typed(), HEALTHBAR_PIPELINE_HANDLE.typed()]
             ),
             visible: Visible {
+                is_visible: false,
                 is_transparent: true,
                 ..Default::default()
             },

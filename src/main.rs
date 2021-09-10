@@ -5,6 +5,7 @@ mod overlay;
 mod physics;
 mod ship;
 mod selection;
+mod debug;
 
 use bevy::prelude::*;
 
@@ -34,6 +35,7 @@ fn main() {
         .add_plugin(PlayerControllerPlugin)
         .add_plugin(HealthBarPlugin)
         .add_plugin(SelectionPlugin)
+        .add_plugin(crate::debug::DebugPlugin)
         .run();
 }
 

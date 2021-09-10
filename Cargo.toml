@@ -15,6 +15,9 @@ bevy = { version = "0.5", features = ["dynamic"] }
 bevy_rapier3d = "*"
 bevy_mod_picking = { version = "0.4" }
 bevy_mod_raycast = { version = "*" }
+bevy_mod_debugdump = "*"
+bevy_prototype_debug_lines = "0.3.2"
 bevy_prototype_lyon = "*"
+bevy-inspector-egui = "*"
 log = "*"
 env_logger = "*"

@@ -16,18 +16,13 @@
           pkgconfig udev alsaLib lutris clang llvmPackages.lld
 		      libGL gcc libudev
           x11 xorg.libXcursor xorg.libXrandr xorg.libXi
+          xorg.libxcb python3 # required for xcb rust dep
           vulkan-tools vulkan-headers vulkan-loader vulkan-validation-layers
       ];
     in {
       devShell = pkgs.mkShell {
         nativeBuildInputs = [ pkgs.bashInteractive ];
-        buildInputs = with pkgs; [ 
-          rust-bin.nightly.latest.default
-          pkgconfig udev alsaLib lutris clang llvmPackages.lld
-		      libGL gcc libudev
-          x11 xorg.libXcursor xorg.libXrandr xorg.libXi
-          vulkan-tools vulkan-headers vulkan-loader vulkan-validation-layers
-        ];
+        buildInputs = deps;
 
         LD_LIBRARY_PATH = with pkgs; lib.makeLibraryPath deps;
       };

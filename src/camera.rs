@@ -1,13 +1,13 @@
 use std::f32::consts::PI;
 
 use bevy::{
-    input::keyboard::KeyboardInput,
     input::mouse::{MouseButton, MouseMotion, MouseWheel},
     prelude::*,
     render::camera::PerspectiveProjection,
 };
 
-use log::debug;
+use crate::SystemLabels;
+//use log::debug;
 pub struct CameraControlPlugin;
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug, SystemLabel)]
@@ -22,6 +22,25 @@ pub struct CameraController {
     upside_down: bool,
     _keys: Keys,
 }
+
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, num_derive::ToPrimitive)]
+pub enum Pan {
+    Left,
+    Right,
+    Forward,
+    Backward,
+    Up,
+    Down
+}
+
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, num_derive::ToPrimitive)]
+pub enum Controls {
+    Orbit,
+    Pan,
+}
+
+impl crate::input::Action for Pan {}
+impl crate::input::Action for Controls {}
 
 pub struct Keys {
     pan_left: KeyCode,
@@ -63,12 +82,15 @@ impl Default for CameraController {
 
 impl Plugin for CameraControlPlugin {
     fn build(&self, app: &mut AppBuilder) {
-        app.add_system(
-            camera_movement
-                .system()
-                .label(CameraControlSystem::CameraMovement),
-        )
-        .insert_resource(Keys::default());
+        app
+            .add_startup_system(setup.system())
+            .add_system(
+                camera_movement
+                    .system()
+                    .label(SystemLabels::Camera)
+                    .after(SystemLabels::Input),
+            )
+            .insert_resource(Keys::default());
     }
 }
 
@@ -79,14 +101,26 @@ fn get_primary_window_size(windows: &Res<Windows>) -> Vec2 {
     window
 }
 
+fn setup(mut inputmap: ResMut<crate::input::MappedInput>) {
+    inputmap.bind(KeyCode::A, Pan::Left);
+    inputmap.bind(KeyCode::D, Pan::Right);
+    inputmap.bind(KeyCode::W, Pan::Forward);
+    inputmap.bind(KeyCode::S, Pan::Backward);
+    inputmap.bind(KeyCode::LShift, Pan::Up);
+    inputmap.bind(KeyCode::LControl, Pan::Down);
+
+    inputmap.bind((MouseButton::Right, crate::input::Switch::MouseMotion), Controls::Orbit);
+    inputmap.bind((MouseButton::Middle, crate::input::Switch::MouseMotion), Controls::Pan);
+
+}
+
 fn camera_movement(
     time: Res<Time>,
-    keyboard: Res<Input<KeyCode>>,
     windows: Res<Windows>,
     mut ev_motion: EventReader<MouseMotion>,
     mut ev_scroll: EventReader<MouseWheel>,
+    input: Res<crate::input::MappedInput>,
     input_mouse: Res<Input<MouseButton>>,
-    keys: Res<Keys>,
     mut q: Query<(
         &mut CameraController,
         &mut Transform,
@@ -95,27 +129,39 @@ fn camera_movement(
 ) {
     // change input mapping for orbit and panning here
     let orbit_button = MouseButton::Right;
-    let pan_button = MouseButton::Other(5);
+    let pan_button = MouseButton::Middle;
 
     let mut pan = Vec2::ZERO;
     let mut rotation_move = Vec2::ZERO;
     let mut scroll = 0.0;
     let mut orbit_button_changed = false;
 
-    if input_mouse.pressed(orbit_button) {
-        for ev in ev_motion.iter() {
-            rotation_move += ev.delta;
-        }
-    } else if input_mouse.pressed(pan_button) {
-        // Pan only if we're not rotating at the moment
-        for ev in ev_motion.iter() {
-            pan += ev.delta;
-        }
+    //debug!("{:?} {:?}", input.pressed(Controls::Orbit), input_mouse.pressed(orbit_button));
+    //assert_eq!(input.pressed(Controls::Orbit), input_mouse.pressed(orbit_button));
+
+    //if input.pressed(Controls::Orbit) {
+    //    for ev in ev_motion.iter() {
+    //        rotation_move += ev.delta;
+    //    }
+    //} else if input.pressed(Controls::Pan) {
+    //    // Pan only if we're not rotating at the moment
+    //    for ev in ev_motion.iter() {
+    //        pan += ev.delta;
+    //    }
+    //}
+
+    if let Some(motion) = input.motion(Controls::Orbit) {
+        rotation_move += motion;
     }
+
+    if let Some(motion) = input.motion(Controls::Pan) {
+        pan += motion;
+    }
+
     for ev in ev_scroll.iter() {
         scroll += ev.y;
     }
-    if input_mouse.just_released(orbit_button) || input_mouse.just_pressed(orbit_button) {
+    if input.just_released(Controls::Orbit) || input.just_pressed(Controls::Orbit) {
         orbit_button_changed = true;
     }
 
@@ -124,44 +170,35 @@ fn camera_movement(
     let mut rotation = Quat::IDENTITY;
     let mut translation = Vec3::ZERO;
 
-    if keyboard.pressed(keys.pan_left) {
+    //if keyboard.pressed(keys.pan_left) {
+    if input.pressed(Pan::Left) {
         //transform.translation -= forward * Vec3::X * rate;
         translation -= Vec3::X;
     }
 
-    if keyboard.pressed(keys.pan_right) {
+    if input.pressed(Pan::Right) {
         //transform.translation += forward * Vec3::X * rate;
         translation += Vec3::X;
     }
 
-    if keyboard.pressed(keys.pan_forward) {
+    if input.pressed(Pan::Forward) {
         //transform.translation -= forward * Vec3::Z * rate;
         translation -= Vec3::Z;
     }
 
-    if keyboard.pressed(keys.pan_backward) {
+    if input.pressed(Pan::Backward) {
         //transform.translation += forward * Vec3::Z * rate;
         translation += Vec3::Z;
     }
 
-    if keyboard.pressed(keys.pan_up) {
+    if input.pressed(Pan::Up) {
         // transform.translation += Vec3::Y * rate;
         translation += Vec3::Y;
     }
 
-    if keyboard.pressed(keys.pan_down) {
+    if input.pressed(Pan::Down) {
         // transform.translation -= Vec3::Y * rate;
         translation -= Vec3::Y;
-    }
-
-    if keyboard.pressed(keys.rot_left) {
-        //transform.rotation = Quat::from_rotation_y(rot_rate) * transform.rotation;
-        rotation *= Quat::from_rotation_y(rot_rate);
-    }
-
-    if keyboard.pressed(keys.rot_right) {
-        //transform.rotation = Quat::from_rotation_y(-rot_rate) * transform.rotation;
-        rotation *= Quat::from_rotation_y(-rot_rate);
     }
 
     for (mut pan_orbit, mut transform, projection) in q.iter_mut() {

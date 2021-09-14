@@ -1,3 +1,4 @@
+#![feature(const_generics)]
 #![deny(unused_must_use)]
 mod camera;
 mod movement;
@@ -6,6 +7,9 @@ mod physics;
 mod ship;
 mod selection;
 mod debug;
+mod input;
+
+mod orders;
 
 use bevy::prelude::*;
 
@@ -15,7 +19,14 @@ use movement::PlayerControllerPlugin;
 use overlay::{HealthBarPlugin};
 use physics::PhysicsPlugin;
 use selection::SelectionPlugin;
-use ship::spawn_ship;
+use ship::spawn_ship; 
+use input::InputPlugin;
+
+#[derive(SystemLabel, Clone, Debug, PartialEq, Eq, Hash)]
+enum SystemLabels {
+    Input,
+    Camera,
+}
 
 fn main() {
     env_logger::init();
@@ -35,6 +46,7 @@ fn main() {
         .add_plugin(PlayerControllerPlugin)
         .add_plugin(HealthBarPlugin)
         .add_plugin(SelectionPlugin)
+        .add_plugin(InputPlugin)
         .add_plugin(crate::debug::DebugPlugin)
         .run();
 }
@@ -88,7 +100,7 @@ fn setup(
         .insert_bundle(PickingCameraBundle::default())
         .insert_bundle(bevy_rapier3d::prelude::RigidBodyBundle::default());
 
-    let cube_handle = asset_server.load("models/houdini_cube/cube.gltf#Mesh0/Primitive0");
+    let cube_handle = asset_server.load("models/houdini/cube.gltf#Mesh0/Primitive0");
 
      // You can also add assets directly to their Assets<T> storage:
     let material_handle = materials.add(StandardMaterial {

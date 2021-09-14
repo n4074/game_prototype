@@ -27,7 +27,7 @@ pub fn spawn_ship(
     overlay_materials: &mut Assets<overlay::Overlay>,
     materials: &mut Assets<StandardMaterial>,
 ) {
-    let cube_handle = asset_server.load("models/houdini_cube/capsule.gltf#Mesh0/Primitive0");
+    let cube_handle = asset_server.load("models/houdini/torchship.gltf#Mesh0/Primitive0");
 
     let material_handle = materials.add(StandardMaterial {
         base_color: Color::rgb(0.8, 0.7, 0.6),

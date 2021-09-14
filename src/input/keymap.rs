@@ -3,44 +3,25 @@ use std::collections::{HashMap, hash_map::DefaultHasher};
 use std::hash::{Hash, Hasher};
 use std::fmt::Debug;
 
-pub trait Key: Send + Sync + Debug + 'static {
-    fn eq(&self, other: &dyn Key) -> bool;
-    fn hash(&self) -> u64;
-    fn as_any(&self) -> &dyn Any;
+use num_traits::{ToPrimitive, FromPrimitive};
+
+#[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
+pub struct AnyKey(TypeId, u16);
+
+pub trait AsAnyKey {
+    fn key(&self) -> AnyKey;
 }
 
-impl<T: Eq + Hash + 'static + Sync + Send + Debug + 'static> Key for T {
-    fn eq(&self, other: &dyn Key) -> bool {
-        if let Some(other) = other.as_any().downcast_ref::<T>() {
-            return self == other;
-        }
-        false
-    }
-
-    fn hash(&self) -> u64 {
-        let mut h = DefaultHasher::new();
-        // mix the typeid of T into the hash to make distinct types
-        // provide distinct hashes
-        Hash::hash(&(TypeId::of::<T>(), self), &mut h);
-        h.finish()
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self
+impl<T: 'static + Any + ToPrimitive> From<T> for AnyKey {
+    fn from(this: T) -> Self {
+        AnyKey(this.type_id(), this.to_u16().unwrap())
     }
 }
 
-impl PartialEq for Box<dyn Key> {
-    fn eq(&self, other: &Self) -> bool {
-        Key::eq(self.as_ref(), other.as_ref())
-    }
-}
-
-impl Eq for Box<dyn Key> {}
-
-impl Hash for Box<dyn Key> {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        let key_hash = Key::hash(self.as_ref());
-        state.write_u64(key_hash);
+pub fn from_key<T: 'static + FromPrimitive>(key: &AnyKey) ->  Option<T> {
+    if TypeId::of::<T>() != key.0 {
+        return None
+    } else {
+        T::from_u16(key.1)
     }
 }

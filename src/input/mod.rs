@@ -20,6 +20,7 @@ impl Plugin for InputPlugin {
             //.add_startup_system(input_setup.system())
             .add_system(input_handling.system().label(SystemLabels::Input))
             .add_system(debug_input.system().after(SystemLabels::Input))
+            .add_startup_system(setup_debug_input.system())
             .insert_resource(MappedInput::default());
     }
 }
@@ -39,6 +40,7 @@ pub enum Switch {
     MouseScroll,
 }
 
+// bevy::input::mouse::MouseButton annoying doesn't implement Ord/PartialOrd which is required to use our graphmap
 #[derive(Eq, Ord, PartialEq, PartialOrd, Copy, Clone, Hash, Debug)]
 pub enum MouseButton_ {
     Left,
@@ -117,17 +119,7 @@ impl Action for SomeKeyBindings {}
 enum Node {
     Root,
     Switch(Switch),
-    And(Switch, Switch),
-}
-
-impl Node {
-    fn and(first: Switch, second: Switch) -> Self {
-        if first <= second {
-            Self::And(first, second)
-        } else {
-            Self::And(second, first)
-        }
-    }
+    Layer(u8),
 }
 
 impl Default for Node {
@@ -147,16 +139,70 @@ pub struct MappedInput {
     boxed_types: HashMap<AnyKey, Box<dyn Action>>,
     bindings: DiGraphMap<Node, Edge>,
     layer: Node,
-    layers: Vec<Vec<Node>>,
     active: HashSet<AnyKey>,
     just_activated: HashSet<AnyKey>,
     just_deactivated: HashSet<AnyKey>,
     pressed: HashSet<Switch>,
     mouse_motion: Vec2,
     mouse_scroll: f32,
+    layer_count: u8,
 }
 
 impl MappedInput {
+    /// Bind an action to a key binding
+
+    pub fn bind<T>(&mut self, key: impl Into<Binding>, action: T)
+    where
+        T: Into<AnyKey> + Action + 'static + Copy + Clone,
+    {
+        let binding = key.into();
+
+        match binding {
+            Binding::DoubleModified(first, second, switch) => {
+                let combined = self.bindings.add_node(Node::Layer(self.layer_count));
+                self.layer_count += 1; // TODO: This will crash on overflow.
+
+                self.bindings.extend(&[
+                    (
+                        Node::Switch(first),
+                        Node::Switch(second),
+                        Edge::Layer(combined),
+                    ),
+                    (
+                        Node::Switch(second),
+                        Node::Switch(first),
+                        Edge::Layer(combined),
+                    ),
+                    (combined, Node::Switch(switch), Edge::Action(action.into())),
+                ]);
+            }
+            Binding::Modified(modifier, switch) => {
+                self.bindings.extend(&[
+                    (
+                        Node::Root,
+                        Node::Switch(modifier),
+                        Edge::Layer(Node::Switch(modifier)),
+                    ),
+                    (
+                        Node::Switch(modifier),
+                        Node::Switch(switch),
+                        Edge::Action(action.into()),
+                    ),
+                ]);
+            }
+
+            Binding::Simple(switch) => {
+                self.bindings.add_edge(
+                    Node::Root,
+                    Node::Switch(switch),
+                    Edge::Action(action.into()),
+                );
+            }
+        }
+
+        self.boxed_types.insert(action.into(), Box::new(action));
+    }
+
     fn update(&mut self) {
         self.just_activated.clear();
         self.just_deactivated.clear();
@@ -230,58 +276,6 @@ impl MappedInput {
             }
             None => {}
         }
-    }
-
-    /// Bind an action to a key binding
-    pub fn bind<T>(&mut self, key: impl Into<Binding>, action: T)
-    where
-        T: Into<AnyKey> + Action + 'static + Copy + Clone,
-    {
-        let binding = key.into();
-
-        match binding {
-            Binding::DoubleModified(first, second, switch) => {
-                let combined = self.bindings.add_node(Node::and(first, second));
-
-                self.bindings.extend(&[
-                    (
-                        Node::Switch(first),
-                        Node::Switch(second),
-                        Edge::Layer(combined),
-                    ),
-                    (
-                        Node::Switch(second),
-                        Node::Switch(first),
-                        Edge::Layer(combined),
-                    ),
-                    (combined, Node::Switch(switch), Edge::Action(action.into())),
-                ]);
-            }
-            Binding::Modified(modifier, switch) => {
-                self.bindings.extend(&[
-                    (
-                        Node::Root,
-                        Node::Switch(modifier),
-                        Edge::Layer(Node::Switch(modifier)),
-                    ),
-                    (
-                        Node::Switch(modifier),
-                        Node::Switch(switch),
-                        Edge::Action(action.into()),
-                    ),
-                ]);
-            }
-
-            Binding::Simple(switch) => {
-                self.bindings.add_edge(
-                    Node::Root,
-                    Node::Switch(switch),
-                    Edge::Action(action.into()),
-                );
-            }
-        }
-
-        self.boxed_types.insert(action.into(), Box::new(action));
     }
 
     fn press(&mut self, key: Switch) {
@@ -454,7 +448,7 @@ fn debug_binding_graph(input: &MappedInput) {
     //file.write_all(dot);
 }
 
-fn debug_input(mut inputs: ResMut<MappedInput>) {
+fn setup_debug_input(mut inputs: ResMut<MappedInput>) {
     inputs.bind(
         (KeyCode::LAlt, KeyCode::A),
         SomeKeyBindings::SomeModifiedAction,
@@ -480,7 +474,9 @@ fn debug_input(mut inputs: ResMut<MappedInput>) {
     );
 
     inputs.bind(MouseButton::Left, SomeKeyBindings::SomeAction);
+}
 
+fn debug_input(inputs: ResMut<MappedInput>) {
     debug!("Pressed: {:?}", inputs.get_active());
     debug!("Just Pressed: {:?}", inputs.get_just_activated());
     debug!("Just Released: {:?}", inputs.get_just_deactivated());

@@ -1,17 +1,12 @@
 use crate::SystemLabels;
 use bevy::input::mouse::{MouseMotion, MouseWheel};
 use bevy::prelude::*;
-use keymap::{AnyKey, AsAnyKey};
+use keymap::AnyKey;
 use num_derive::{FromPrimitive, ToPrimitive};
-use num_traits::ToPrimitive;
-use std::any::TypeId;
-use std::borrow::Borrow;
 use std::collections::{HashMap, HashSet};
 use std::fmt::Debug;
 
 use petgraph::graphmap::DiGraphMap;
-
-use std::any::Any;
 
 mod keymap;
 
@@ -25,7 +20,6 @@ impl Plugin for InputPlugin {
             //.add_startup_system(input_setup.system())
             .add_system(input_handling.system().label(SystemLabels::Input))
             .add_system(debug_input.system().after(SystemLabels::Input))
-            .add_event::<KeyEvent<{ KeyCode::A }>>()
             .insert_resource(MappedInput::default());
     }
 }
@@ -114,15 +108,6 @@ where
     }
 }
 
-#[derive(Eq, PartialEq, Debug)]
-enum TestEnum {
-    A,
-    B,
-}
-
-#[derive(Eq, PartialEq, Debug)]
-struct KeyEvent<const T: KeyCode>(KeyCode);
-
 pub trait Action: Send + Sync + std::fmt::Debug {}
 
 impl Action for SomeKeyBindings {}
@@ -161,7 +146,6 @@ pub struct MappedInput {
     boxed_types: HashMap<AnyKey, Box<dyn Action>>,
     bindings: DiGraphMap<Node, Edge>,
     layer: Node,
-    //active: HashMap<Switch, AnyKey>,
     active_layer: Node,
     layers: Vec<Vec<Node>>,
     active: HashSet<AnyKey>,
@@ -169,9 +153,8 @@ pub struct MappedInput {
     just_deactivated: HashSet<AnyKey>,
 
     pressed_: HashSet<Switch>,
-    just_pressed_: HashSet<Switch>,
-    just_released_: HashSet<Switch>,
-
+    //just_pressed_: HashSet<Switch>,
+    //just_released_: HashSet<Switch>,
     moving: HashSet<AnyKey>,
     mouse_motion: Vec2,
 }
@@ -181,8 +164,8 @@ impl MappedInput {
         self.just_activated.clear();
         self.just_deactivated.clear();
         self.moving.clear();
-        self.just_pressed_.clear();
-        self.just_released_.clear();
+        //self.just_pressed_.clear();
+        //self.just_released_.clear();
         self.mouse_motion = Vec2::ZERO;
     }
 
@@ -233,10 +216,16 @@ impl MappedInput {
     }
 
     fn activate(&mut self, node: Node) {
-        match self.bindings.edge_weight(self.layer, node) {
+        let edge = self
+            .bindings
+            .edge_weight(self.layer, node)
+            .or(self.bindings.edge_weight(Node::Root, node));
+
+        match edge {
             Some(Edge::Action(action)) => {
-                self.active.insert(*action);
-                self.just_activated.insert(*action);
+                if self.active.insert(*action) {
+                    self.just_activated.insert(*action);
+                }
             }
             Some(Edge::Layer(layer)) => {
                 // Switch to a new layer
@@ -246,20 +235,20 @@ impl MappedInput {
         }
     }
 
-    fn resolve(&mut self) {
-        // todo fix this clone
-        for &switch in self.just_released_.clone().iter() {
-            self.deactivate(Node::Switch(switch));
-        }
+    //fn _resolve(&mut self) {
+    //    // todo fix this clone
+    //    for &switch in self.just_released_.clone().iter() {
+    //        self.deactivate(Node::Switch(switch));
+    //    }
 
-        for &switch in self.just_pressed_.clone().iter() {
-            self.activate(Node::Switch(switch))
-        }
+    //    for &switch in self.just_pressed_.clone().iter() {
+    //        self.activate(Node::Switch(switch))
+    //    }
 
-        if self.mouse_motion != Vec2::ZERO {
-            self.activate(Node::Switch(Switch::MouseMotion));
-        }
-    }
+    //    if self.mouse_motion != Vec2::ZERO {
+    //        self.activate(Node::Switch(Switch::MouseMotion));
+    //    }
+    //}
 
     pub fn bind<T>(&mut self, key: impl Into<Binding>, action: T)
     where
@@ -314,8 +303,10 @@ impl MappedInput {
     }
 
     fn press(&mut self, key: Switch) {
+        //debug!("Activating {:?}", key);
         if !self.pressed_.contains(&key) {
-            self.just_pressed_.insert(key);
+            //self.just_pressed_.insert(key);
+            self.activate(Node::Switch(key));
             self.pressed_.insert(key);
         }
     }
@@ -342,11 +333,9 @@ impl MappedInput {
     }
 
     pub fn moving(&mut self, motion: Vec2) {
-        //if let Some(&binding) = self.bindings.get(&Switch::MouseMotion.into()) {
-        //self.moving.insert(binding);
-
+        // todo: Think about the performance here
+        self.activate(Node::Switch(Switch::MouseMotion));
         self.mouse_motion += motion;
-        //}
     }
 
     pub fn motion<T>(&self, key: T) -> Option<Vec2>
@@ -361,8 +350,10 @@ impl MappedInput {
     }
 
     fn release(&mut self, key: Switch) {
+        //debug!("Deactivate {:?}", key);
         if self.pressed_.remove(&key) {
-            self.just_released_.insert(key);
+            //self.just_released_.insert(key);
+            self.deactivate(Node::Switch(key));
         }
     }
 
@@ -393,7 +384,7 @@ fn input_handling(
     mut keyboard_input: EventReader<bevy::input::keyboard::KeyboardInput>,
     mut mouse_button: EventReader<bevy::input::mouse::MouseButtonInput>,
     mut mouse_motion: EventReader<MouseMotion>,
-    mut mouse_scroll: EventReader<MouseWheel>,
+    mut _mouse_scroll: EventReader<MouseWheel>,
 ) {
     inputs.update();
 
@@ -421,8 +412,6 @@ fn input_handling(
     for event in mouse_motion.iter() {
         inputs.moving(event.delta);
     }
-
-    inputs.resolve();
 }
 
 #[derive(Hash, PartialEq, Eq, Debug, ToPrimitive, FromPrimitive, Clone, Copy)]
@@ -447,7 +436,7 @@ fn to_debug_edge(edge: &Edge, input: &MappedInput) -> String {
     }
 }
 
-fn to_debug_node(node: &Node, input: &MappedInput) -> String {
+fn to_debug_node(node: &Node, _input: &MappedInput) -> String {
     match *node {
         a => format!("{:?}", a),
     }
@@ -456,8 +445,8 @@ fn to_debug_node(node: &Node, input: &MappedInput) -> String {
 fn debug_binding_graph(input: &MappedInput) {
     let graph = input.bindings.clone().into_graph::<u32>();
     let debug_graph = graph.map(
-        |i, n| to_debug_node(n, input),
-        |i, e| to_debug_edge(e, input),
+        |_, n| to_debug_node(n, input),
+        |_, e| to_debug_edge(e, input),
     );
     let dot = petgraph::dot::Dot::new(&debug_graph);
 

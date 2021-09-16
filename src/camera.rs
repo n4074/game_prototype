@@ -1,7 +1,7 @@
 use std::f32::consts::PI;
 
 use bevy::{
-    input::mouse::{MouseButton, MouseMotion, MouseWheel},
+    input::mouse::{MouseButton, MouseWheel},
     prelude::*,
     render::camera::PerspectiveProjection,
 };
@@ -10,17 +10,11 @@ use crate::SystemLabels;
 //use log::debug;
 pub struct CameraControlPlugin;
 
-#[derive(Clone, PartialEq, Eq, Hash, Debug, SystemLabel)]
-pub enum CameraControlSystem {
-    CameraMovement,
-}
-
 pub struct CameraController {
     _sensitivity: f32,
     radius: f32,
     focus: Vec3,
     upside_down: bool,
-    _keys: Keys,
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, num_derive::ToPrimitive)]
@@ -42,32 +36,6 @@ pub enum Controls {
 impl crate::input::Action for Pan {}
 impl crate::input::Action for Controls {}
 
-pub struct Keys {
-    pan_left: KeyCode,
-    pan_right: KeyCode,
-    pan_forward: KeyCode,
-    pan_backward: KeyCode,
-    pan_up: KeyCode,
-    pan_down: KeyCode,
-    rot_left: KeyCode,
-    rot_right: KeyCode,
-}
-
-impl Default for Keys {
-    fn default() -> Keys {
-        Keys {
-            pan_left: KeyCode::A,
-            pan_right: KeyCode::D,
-            pan_forward: KeyCode::W,
-            pan_backward: KeyCode::S,
-            pan_up: KeyCode::LShift,
-            pan_down: KeyCode::LControl,
-            rot_left: KeyCode::Q,
-            rot_right: KeyCode::E,
-        }
-    }
-}
-
 impl Default for CameraController {
     fn default() -> CameraController {
         CameraController {
@@ -75,21 +43,18 @@ impl Default for CameraController {
             radius: 10f32,
             _sensitivity: 10f32,
             upside_down: false,
-            _keys: Default::default(),
         }
     }
 }
 
 impl Plugin for CameraControlPlugin {
     fn build(&self, app: &mut AppBuilder) {
-        app.add_startup_system(setup.system())
-            .add_system(
-                camera_movement
-                    .system()
-                    .label(SystemLabels::Camera)
-                    .after(SystemLabels::Input),
-            )
-            .insert_resource(Keys::default());
+        app.add_startup_system(setup.system()).add_system(
+            camera_movement
+                .system()
+                .label(SystemLabels::Camera)
+                .after(SystemLabels::Input),
+        );
     }
 }
 
@@ -121,10 +86,8 @@ fn setup(mut inputmap: ResMut<crate::input::MappedInput>) {
 fn camera_movement(
     time: Res<Time>,
     windows: Res<Windows>,
-    mut ev_motion: EventReader<MouseMotion>,
     mut ev_scroll: EventReader<MouseWheel>,
     input: Res<crate::input::MappedInput>,
-    input_mouse: Res<Input<MouseButton>>,
     mut q: Query<(
         &mut CameraController,
         &mut Transform,
@@ -132,9 +95,6 @@ fn camera_movement(
     )>,
 ) {
     // change input mapping for orbit and panning here
-    let orbit_button = MouseButton::Right;
-    let pan_button = MouseButton::Middle;
-
     let mut pan = Vec2::ZERO;
     let mut rotation_move = Vec2::ZERO;
     let mut scroll = 0.0;
@@ -176,9 +136,9 @@ fn camera_movement(
         orbit_button_changed = true;
     }
 
-    let rot_rate = PI * time.delta().as_secs_f32();
+    let _rot_rate = PI * time.delta().as_secs_f32();
 
-    let mut rotation = Quat::IDENTITY;
+    let mut _rotation = Quat::IDENTITY;
     let mut translation = Vec3::ZERO;
 
     //if keyboard.pressed(keys.pan_left) {

@@ -1,7 +1,6 @@
 use std::any::{Any, TypeId};
-use std::collections::{hash_map::DefaultHasher, HashMap};
 use std::fmt::Debug;
-use std::hash::{Hash, Hasher};
+use std::hash::Hash;
 
 use num_traits::{FromPrimitive, ToPrimitive};
 
@@ -18,7 +17,7 @@ impl<T: 'static + Any + ToPrimitive> From<T> for AnyKey {
     }
 }
 
-pub fn from_key<T: 'static + FromPrimitive>(key: &AnyKey) -> Option<T> {
+pub fn _from_key<T: 'static + FromPrimitive>(key: &AnyKey) -> Option<T> {
     if TypeId::of::<T>() != key.0 {
         return None;
     } else {

@@ -36,6 +36,7 @@ pub enum Switch {
     Key(KeyCode),
     Mouse(MouseButton_),
     MouseMotion,
+    MouseScroll,
 }
 
 #[derive(Eq, Ord, PartialEq, PartialOrd, Copy, Clone, Hash, Debug)]
@@ -146,29 +147,24 @@ pub struct MappedInput {
     boxed_types: HashMap<AnyKey, Box<dyn Action>>,
     bindings: DiGraphMap<Node, Edge>,
     layer: Node,
-    active_layer: Node,
     layers: Vec<Vec<Node>>,
     active: HashSet<AnyKey>,
     just_activated: HashSet<AnyKey>,
     just_deactivated: HashSet<AnyKey>,
-
-    pressed_: HashSet<Switch>,
-    //just_pressed_: HashSet<Switch>,
-    //just_released_: HashSet<Switch>,
-    moving: HashSet<AnyKey>,
+    pressed: HashSet<Switch>,
     mouse_motion: Vec2,
+    mouse_scroll: f32,
 }
 
 impl MappedInput {
     fn update(&mut self) {
         self.just_activated.clear();
         self.just_deactivated.clear();
-        self.moving.clear();
-        //self.just_pressed_.clear();
-        //self.just_released_.clear();
         self.mouse_motion = Vec2::ZERO;
+        self.mouse_scroll = 0f32;
     }
 
+    /// Deactivate a bound action
     fn deactivate(&mut self, node: Node) {
         for (_, _, e) in self.bindings.edges(node) {
             // Outgoing edges only exist on layers.
@@ -215,6 +211,7 @@ impl MappedInput {
         }
     }
 
+    /// Activate a bound action
     fn activate(&mut self, node: Node) {
         let edge = self
             .bindings
@@ -235,21 +232,7 @@ impl MappedInput {
         }
     }
 
-    //fn _resolve(&mut self) {
-    //    // todo fix this clone
-    //    for &switch in self.just_released_.clone().iter() {
-    //        self.deactivate(Node::Switch(switch));
-    //    }
-
-    //    for &switch in self.just_pressed_.clone().iter() {
-    //        self.activate(Node::Switch(switch))
-    //    }
-
-    //    if self.mouse_motion != Vec2::ZERO {
-    //        self.activate(Node::Switch(Switch::MouseMotion));
-    //    }
-    //}
-
+    /// Bind an action to a key binding
     pub fn bind<T>(&mut self, key: impl Into<Binding>, action: T)
     where
         T: Into<AnyKey> + Action + 'static + Copy + Clone,
@@ -299,15 +282,12 @@ impl MappedInput {
         }
 
         self.boxed_types.insert(action.into(), Box::new(action));
-        //self.bindings.insert(binding, action.into());
     }
 
     fn press(&mut self, key: Switch) {
-        //debug!("Activating {:?}", key);
-        if !self.pressed_.contains(&key) {
-            //self.just_pressed_.insert(key);
+        if !self.pressed.contains(&key) {
             self.activate(Node::Switch(key));
-            self.pressed_.insert(key);
+            self.pressed.insert(key);
         }
     }
 
@@ -332,10 +312,15 @@ impl MappedInput {
         self.active.get(&key.into()).is_some()
     }
 
-    pub fn moving(&mut self, motion: Vec2) {
+    pub fn move_mouse(&mut self, motion: Vec2) {
         // todo: Think about the performance here
         self.activate(Node::Switch(Switch::MouseMotion));
         self.mouse_motion += motion;
+    }
+
+    pub fn scroll_mouse(&mut self, scroll: f32) {
+        self.activate(Node::Switch(Switch::MouseScroll));
+        self.mouse_scroll += scroll;
     }
 
     pub fn motion<T>(&self, key: T) -> Option<Vec2>
@@ -349,10 +334,19 @@ impl MappedInput {
         }
     }
 
+    pub fn scroll<T>(&self, key: T) -> Option<f32>
+    where
+        T: Into<AnyKey>,
+    {
+        if self.active(key.into()) {
+            Some(self.mouse_scroll)
+        } else {
+            None
+        }
+    }
+
     fn release(&mut self, key: Switch) {
-        //debug!("Deactivate {:?}", key);
-        if self.pressed_.remove(&key) {
-            //self.just_released_.insert(key);
+        if self.pressed.remove(&key) {
             self.deactivate(Node::Switch(key));
         }
     }
@@ -384,7 +378,7 @@ fn input_handling(
     mut keyboard_input: EventReader<bevy::input::keyboard::KeyboardInput>,
     mut mouse_button: EventReader<bevy::input::mouse::MouseButtonInput>,
     mut mouse_motion: EventReader<MouseMotion>,
-    mut _mouse_scroll: EventReader<MouseWheel>,
+    mut mouse_scroll: EventReader<MouseWheel>,
 ) {
     inputs.update();
 
@@ -410,7 +404,11 @@ fn input_handling(
     }
 
     for event in mouse_motion.iter() {
-        inputs.moving(event.delta);
+        inputs.move_mouse(event.delta);
+    }
+
+    for scroll in mouse_scroll.iter() {
+        inputs.scroll_mouse(scroll.y);
     }
 }
 

@@ -1,10 +1,6 @@
 use std::f32::consts::PI;
 
-use bevy::{
-    input::mouse::{MouseButton, MouseWheel},
-    prelude::*,
-    render::camera::PerspectiveProjection,
-};
+use bevy::{input::mouse::MouseButton, prelude::*, render::camera::PerspectiveProjection};
 
 use crate::SystemLabels;
 //use log::debug;
@@ -31,6 +27,7 @@ pub enum Pan {
 pub enum Controls {
     Orbit,
     Pan,
+    Zoom,
 }
 
 impl crate::input::Action for Pan {}
@@ -81,12 +78,13 @@ fn setup(mut inputmap: ResMut<crate::input::MappedInput>) {
         (MouseButton::Middle, crate::input::Switch::MouseMotion),
         Controls::Pan,
     );
+
+    inputmap.bind(crate::input::Switch::MouseScroll, Controls::Zoom);
 }
 
 fn camera_movement(
     time: Res<Time>,
     windows: Res<Windows>,
-    mut ev_scroll: EventReader<MouseWheel>,
     input: Res<crate::input::MappedInput>,
     mut q: Query<(
         &mut CameraController,
@@ -97,29 +95,13 @@ fn camera_movement(
     // change input mapping for orbit and panning here
     let mut pan = Vec2::ZERO;
     let mut rotation_move = Vec2::ZERO;
-    let mut scroll = 0.0;
     let mut orbit_button_changed = false;
-
-    //debug!("{:?} {:?}", input.pressed(Controls::Orbit), input_mouse.pressed(orbit_button));
-    //assert_eq!(input.pressed(Controls::Orbit), input_mouse.pressed(orbit_button));
 
     if let Some(motion) = input.motion(Controls::Orbit) {
         rotation_move += motion;
     } else if let Some(motion) = input.motion(Controls::Pan) {
         pan += motion;
     }
-
-    //if input.active(Controls::Orbit) {
-    //    for ev in ev_motion.iter() {
-    //        //rotation_move += ev.delta;
-    //        rotation_move += input.motion(Controls::Orbit);
-    //    }
-    //} else if input.pressed(Controls::Pan) {
-    //    // Pan only if we're not rotating at the moment
-    //    for ev in ev_motion.iter() {
-    //        pan += ev.delta;
-    //    }
-    //}
 
     if let Some(motion) = input.motion(Controls::Orbit) {
         rotation_move += motion;
@@ -129,46 +111,38 @@ fn camera_movement(
         pan += motion;
     }
 
-    for ev in ev_scroll.iter() {
-        scroll += ev.y;
-    }
+    let mut pan = input.motion(Controls::Pan).unwrap_or(Vec2::ZERO);
+    let scroll = input.scroll(Controls::Zoom).unwrap_or(0.0);
+
     if input.just_deactivated(Controls::Orbit) || input.just_activated(Controls::Orbit) {
         orbit_button_changed = true;
     }
 
     let _rot_rate = PI * time.delta().as_secs_f32();
 
-    let mut _rotation = Quat::IDENTITY;
     let mut translation = Vec3::ZERO;
 
-    //if keyboard.pressed(keys.pan_left) {
     if input.active(Pan::Left) {
-        //transform.translation -= forward * Vec3::X * rate;
         translation -= Vec3::X;
     }
 
     if input.active(Pan::Right) {
-        //transform.translation += forward * Vec3::X * rate;
         translation += Vec3::X;
     }
 
     if input.active(Pan::Forward) {
-        //transform.translation -= forward * Vec3::Z * rate;
         translation -= Vec3::Z;
     }
 
     if input.active(Pan::Backward) {
-        //transform.translation += forward * Vec3::Z * rate;
         translation += Vec3::Z;
     }
 
     if input.active(Pan::Up) {
-        // transform.translation += Vec3::Y * rate;
         translation += Vec3::Y;
     }
 
     if input.active(Pan::Down) {
-        // transform.translation -= Vec3::Y * rate;
         translation -= Vec3::Y;
     }
 

@@ -30,7 +30,7 @@ pub enum Pan {
     Forward,
     Backward,
     Up,
-    Down
+    Down,
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, num_derive::ToPrimitive)]
@@ -82,8 +82,7 @@ impl Default for CameraController {
 
 impl Plugin for CameraControlPlugin {
     fn build(&self, app: &mut AppBuilder) {
-        app
-            .add_startup_system(setup.system())
+        app.add_startup_system(setup.system())
             .add_system(
                 camera_movement
                     .system()
@@ -109,9 +108,14 @@ fn setup(mut inputmap: ResMut<crate::input::MappedInput>) {
     inputmap.bind(KeyCode::LShift, Pan::Up);
     inputmap.bind(KeyCode::LControl, Pan::Down);
 
-    inputmap.bind((MouseButton::Right, crate::input::Switch::MouseMotion), Controls::Orbit);
-    inputmap.bind((MouseButton::Middle, crate::input::Switch::MouseMotion), Controls::Pan);
-
+    inputmap.bind(
+        (MouseButton::Right, crate::input::Switch::MouseMotion),
+        Controls::Orbit,
+    );
+    inputmap.bind(
+        (MouseButton::Middle, crate::input::Switch::MouseMotion),
+        Controls::Pan,
+    );
 }
 
 fn camera_movement(
@@ -139,9 +143,16 @@ fn camera_movement(
     //debug!("{:?} {:?}", input.pressed(Controls::Orbit), input_mouse.pressed(orbit_button));
     //assert_eq!(input.pressed(Controls::Orbit), input_mouse.pressed(orbit_button));
 
-    //if input.pressed(Controls::Orbit) {
+    if let Some(motion) = input.motion(Controls::Orbit) {
+        rotation_move += motion;
+    } else if let Some(motion) = input.motion(Controls::Pan) {
+        pan += motion;
+    }
+
+    //if input.active(Controls::Orbit) {
     //    for ev in ev_motion.iter() {
-    //        rotation_move += ev.delta;
+    //        //rotation_move += ev.delta;
+    //        rotation_move += input.motion(Controls::Orbit);
     //    }
     //} else if input.pressed(Controls::Pan) {
     //    // Pan only if we're not rotating at the moment
@@ -161,7 +172,7 @@ fn camera_movement(
     for ev in ev_scroll.iter() {
         scroll += ev.y;
     }
-    if input.just_released(Controls::Orbit) || input.just_pressed(Controls::Orbit) {
+    if input.just_deactivated(Controls::Orbit) || input.just_activated(Controls::Orbit) {
         orbit_button_changed = true;
     }
 
@@ -171,32 +182,32 @@ fn camera_movement(
     let mut translation = Vec3::ZERO;
 
     //if keyboard.pressed(keys.pan_left) {
-    if input.pressed(Pan::Left) {
+    if input.active(Pan::Left) {
         //transform.translation -= forward * Vec3::X * rate;
         translation -= Vec3::X;
     }
 
-    if input.pressed(Pan::Right) {
+    if input.active(Pan::Right) {
         //transform.translation += forward * Vec3::X * rate;
         translation += Vec3::X;
     }
 
-    if input.pressed(Pan::Forward) {
+    if input.active(Pan::Forward) {
         //transform.translation -= forward * Vec3::Z * rate;
         translation -= Vec3::Z;
     }
 
-    if input.pressed(Pan::Backward) {
+    if input.active(Pan::Backward) {
         //transform.translation += forward * Vec3::Z * rate;
         translation += Vec3::Z;
     }
 
-    if input.pressed(Pan::Up) {
+    if input.active(Pan::Up) {
         // transform.translation += Vec3::Y * rate;
         translation += Vec3::Y;
     }
 
-    if input.pressed(Pan::Down) {
+    if input.active(Pan::Down) {
         // transform.translation -= Vec3::Y * rate;
         translation -= Vec3::Y;
     }

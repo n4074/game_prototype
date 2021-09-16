@@ -1,14 +1,15 @@
-
-use bevy::prelude::*;
+use crate::SystemLabels;
 use bevy::input::mouse::{MouseMotion, MouseWheel};
+use bevy::prelude::*;
+use keymap::{AnyKey, AsAnyKey};
+use num_derive::{FromPrimitive, ToPrimitive};
+use num_traits::ToPrimitive;
 use std::any::TypeId;
 use std::borrow::Borrow;
 use std::collections::{HashMap, HashSet};
-use crate::SystemLabels;
-use num_derive::{FromPrimitive, ToPrimitive};
-use num_traits::{ToPrimitive};
-use keymap::{AnyKey, AsAnyKey};
 use std::fmt::Debug;
+
+use petgraph::graphmap::DiGraphMap;
 
 use std::any::Any;
 
@@ -25,8 +26,7 @@ impl Plugin for InputPlugin {
             .add_system(input_handling.system().label(SystemLabels::Input))
             .add_system(debug_input.system().after(SystemLabels::Input))
             .add_event::<KeyEvent<{ KeyCode::A }>>()
-            .insert_resource(MappedInput::default())
-        ;
+            .insert_resource(MappedInput::default());
     }
 }
 
@@ -34,13 +34,33 @@ impl Plugin for InputPlugin {
 pub enum Binding {
     Simple(Switch),
     Modified(Switch, Switch),
+    DoubleModified(Switch, Switch, Switch),
 }
 
-#[derive(Debug, Hash, PartialEq, Eq, Copy, Clone)]
+#[derive(Debug, Hash, PartialEq, Eq, Copy, Clone, Ord, PartialOrd)]
 pub enum Switch {
     Key(KeyCode),
-    Mouse(MouseButton),
+    Mouse(MouseButton_),
     MouseMotion,
+}
+
+#[derive(Eq, Ord, PartialEq, PartialOrd, Copy, Clone, Hash, Debug)]
+pub enum MouseButton_ {
+    Left,
+    Right,
+    Middle,
+    Other(u16),
+}
+
+impl From<MouseButton> for MouseButton_ {
+    fn from(button: MouseButton) -> Self {
+        match button {
+            MouseButton::Left => Self::Left,
+            MouseButton::Right => Self::Right,
+            MouseButton::Middle => Self::Middle,
+            MouseButton::Other(u16) => Self::Other(u16),
+        }
+    }
 }
 
 impl From<Switch> for Binding {
@@ -51,7 +71,7 @@ impl From<Switch> for Binding {
 
 impl From<MouseButton> for Switch {
     fn from(button: MouseButton) -> Self {
-        Switch::Mouse(button)
+        Switch::Mouse(button.into())
     }
 }
 
@@ -62,8 +82,8 @@ impl From<KeyCode> for Switch {
 }
 
 impl From<MouseButton> for Binding {
-    fn from(keycode: MouseButton) -> Binding {
-        Binding::Simple(Switch::Mouse(keycode))
+    fn from(button: MouseButton) -> Binding {
+        Binding::Simple(button.into())
     }
 }
 
@@ -73,13 +93,26 @@ impl From<KeyCode> for Binding {
     }
 }
 
-impl<T: Into<Switch>, Q: Into<Switch>> From<(T, Q)> for Binding {
+impl<T, Q> From<(T, Q)> for Binding
+where
+    T: Into<Switch>,
+    Q: Into<Switch>,
+{
     fn from(keys: (T, Q)) -> Binding {
         Binding::Modified(keys.0.into(), keys.1.into())
     }
 }
 
-
+impl<T, Q, R> From<(T, Q, R)> for Binding
+where
+    T: Into<Switch>,
+    Q: Into<Switch>,
+    R: Into<Switch>,
+{
+    fn from(keys: (T, Q, R)) -> Binding {
+        Binding::DoubleModified(keys.0.into(), keys.1.into(), keys.2.into())
+    }
+}
 
 #[derive(Eq, PartialEq, Debug)]
 enum TestEnum {
@@ -94,221 +127,302 @@ pub trait Action: Send + Sync + std::fmt::Debug {}
 
 impl Action for SomeKeyBindings {}
 
+#[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Copy, Clone)]
+enum Node {
+    Root,
+    Switch(Switch),
+    And(Switch, Switch),
+}
+
+impl Node {
+    fn and(first: Switch, second: Switch) -> Self {
+        if first <= second {
+            Self::And(first, second)
+        } else {
+            Self::And(second, first)
+        }
+    }
+}
+
+impl Default for Node {
+    fn default() -> Self {
+        Self::Root
+    }
+}
+
+#[derive(Debug, Copy, Clone)]
+enum Edge {
+    Action(AnyKey),
+    Layer(Node),
+}
+
 #[derive(Debug, Default)]
 pub struct MappedInput {
     boxed_types: HashMap<AnyKey, Box<dyn Action>>,
-    bindings: HashMap<Binding, AnyKey>,
-    //bindings_: HashMap<AnyKey, Binding>,
-    bindings_interested: HashMap<Switch, Binding>,
-    modifiers: HashSet<Switch>,
-    modifier: Option<Switch>,
-    pressed: HashSet<AnyKey>,
-    just_pressed: HashSet<AnyKey>,
-    just_released: HashSet<AnyKey>,
+    bindings: DiGraphMap<Node, Edge>,
+    layer: Node,
+    //active: HashMap<Switch, AnyKey>,
+    active_layer: Node,
+    layers: Vec<Vec<Node>>,
+    active: HashSet<AnyKey>,
+    just_activated: HashSet<AnyKey>,
+    just_deactivated: HashSet<AnyKey>,
+
     pressed_: HashSet<Switch>,
     just_pressed_: HashSet<Switch>,
     just_released_: HashSet<Switch>,
+
     moving: HashSet<AnyKey>,
     mouse_motion: Vec2,
 }
 
 impl MappedInput {
-
     fn update(&mut self) {
-        self.just_pressed.clear();
-        self.just_released.clear();
+        self.just_activated.clear();
+        self.just_deactivated.clear();
         self.moving.clear();
         self.just_pressed_.clear();
         self.just_released_.clear();
         self.mouse_motion = Vec2::ZERO;
     }
 
-    fn is_active(&self, binding: &Binding) -> bool {
-        match binding {
-            Binding::Simple(switch) => { self.pressed_.contains(switch) }
-            Binding::Modified(modifier, switch) =>  { self.pressed_.contains(switch) && self.pressed_.contains(modifier) }
+    fn deactivate(&mut self, node: Node) {
+        for (_, _, e) in self.bindings.edges(node) {
+            // Outgoing edges only exist on layers.
+
+            match e {
+                Edge::Action(action) => {
+                    // Deactivate action depending on this key
+                    if self.active.remove(action) {
+                        self.just_deactivated.insert(*action);
+                    }
+                }
+                Edge::Layer(_) => {} // Outgoing layer edges aren't useful here
+            }
+        }
+
+        let mut new_layer = None;
+
+        for neighbour in self
+            .bindings
+            .neighbors_directed(node, petgraph::EdgeDirection::Incoming)
+        {
+            match self.bindings.edge_weight(neighbour, node) {
+                Some(Edge::Action(action)) => {
+                    if self.active.remove(action) {
+                        self.just_deactivated.insert(*action);
+                    }
+                }
+                Some(Edge::Layer(layer)) => {
+                    if *layer == self.layer {
+                        // the current layer depends on this node
+                        // TODO: only assign if len of neighbour layer is longer than current
+                        new_layer = Some(neighbour);
+                    }
+                }
+                None => {}
+            }
+        }
+
+        if let Some(layer) = new_layer {
+            if self.layer != node {
+                self.deactivate(self.layer);
+            }
+            self.layer = layer;
+        }
+    }
+
+    fn activate(&mut self, node: Node) {
+        match self.bindings.edge_weight(self.layer, node) {
+            Some(Edge::Action(action)) => {
+                self.active.insert(*action);
+                self.just_activated.insert(*action);
+            }
+            Some(Edge::Layer(layer)) => {
+                // Switch to a new layer
+                self.layer = *layer;
+            }
+            None => {}
         }
     }
 
     fn resolve(&mut self) {
-        for switch in self.just_pressed_.iter().chain(self.just_released_.iter()) {
-            if let Some(binding) = self.bindings_interested.get(switch) {
-                if self.is_active(binding) {
-                    let key = self.bindings.get(&binding);
-                    // todo shouldn't need to clone here
-                    self.pressed.insert(key.unwrap().clone());
-                    self.just_pressed.insert(key.unwrap().clone());
-                } else {
-                    let key = self.bindings.get(&binding);
-                    // todo shouldn't need to clone here
-                    self.pressed.remove(key.unwrap());
-                    self.just_released.insert(key.unwrap().clone());
-                }
-            }
+        // todo fix this clone
+        for &switch in self.just_released_.clone().iter() {
+            self.deactivate(Node::Switch(switch));
+        }
+
+        for &switch in self.just_pressed_.clone().iter() {
+            self.activate(Node::Switch(switch))
+        }
+
+        if self.mouse_motion != Vec2::ZERO {
+            self.activate(Node::Switch(Switch::MouseMotion));
         }
     }
 
-    pub fn bind<T>(&mut self, key: impl Into<Binding>, action: T) 
-        where T: Into<AnyKey> + Action + 'static + Copy + Clone {
+    pub fn bind<T>(&mut self, key: impl Into<Binding>, action: T)
+    where
+        T: Into<AnyKey> + Action + 'static + Copy + Clone,
+    {
         let binding = key.into();
-        if let Binding::Modified(modifier, _) = binding {
-            self.modifiers.insert(modifier);
+
+        match binding {
+            Binding::DoubleModified(first, second, switch) => {
+                let combined = self.bindings.add_node(Node::and(first, second));
+
+                self.bindings.extend(&[
+                    (
+                        Node::Switch(first),
+                        Node::Switch(second),
+                        Edge::Layer(combined),
+                    ),
+                    (
+                        Node::Switch(second),
+                        Node::Switch(first),
+                        Edge::Layer(combined),
+                    ),
+                    (combined, Node::Switch(switch), Edge::Action(action.into())),
+                ]);
+            }
+            Binding::Modified(modifier, switch) => {
+                self.bindings.extend(&[
+                    (
+                        Node::Root,
+                        Node::Switch(modifier),
+                        Edge::Layer(Node::Switch(modifier)),
+                    ),
+                    (
+                        Node::Switch(modifier),
+                        Node::Switch(switch),
+                        Edge::Action(action.into()),
+                    ),
+                ]);
+            }
+
+            Binding::Simple(switch) => {
+                self.bindings.add_edge(
+                    Node::Root,
+                    Node::Switch(switch),
+                    Edge::Action(action.into()),
+                );
+            }
         }
 
         self.boxed_types.insert(action.into(), Box::new(action));
-        self.bindings.insert(binding, action.into());
+        //self.bindings.insert(binding, action.into());
     }
 
-    fn binding(&mut self, key: Switch) -> Option<&AnyKey> {
-        
-        let binding = if let Some(modifier) = self.modifier {
-            Binding::Modified(modifier, key)
-        } else {
-            Binding::Simple(key)
-        };
-
-        self.bindings.get(&binding)
-    }
-
-    fn press(&mut self, key: Switch) -> bool {
-
-        self.pressed_.insert(key);
-        self.just_pressed_.insert(key);
-
-
-        if self.modifiers.contains(&key) {
-            self.modifier = Some(key);
-        }
-
-        if let Some(&binding) = self.binding(key) {
-            self.pressed.insert(binding);
-            self.just_pressed.insert(binding);
-            true
-        } else {
-            false
+    fn press(&mut self, key: Switch) {
+        if !self.pressed_.contains(&key) {
+            self.just_pressed_.insert(key);
+            self.pressed_.insert(key);
         }
     }
 
-    pub fn pressed<T>(&self, key: T) -> bool 
-        where T: Into<AnyKey>
+    pub fn just_activated<T>(&self, key: T) -> bool
+    where
+        T: Into<AnyKey>,
     {
-        self.pressed.get(&key.into()).is_some()
+        self.just_activated.get(&key.into()).is_some()
+    }
+
+    pub fn just_deactivated<T>(&self, key: T) -> bool
+    where
+        T: Into<AnyKey>,
+    {
+        self.just_deactivated.get(&key.into()).is_some()
+    }
+
+    pub fn active<T>(&self, key: T) -> bool
+    where
+        T: Into<AnyKey>,
+    {
+        self.active.get(&key.into()).is_some()
     }
 
     pub fn moving(&mut self, motion: Vec2) {
-        if let Some(&binding) = self.binding(Switch::MouseMotion) {
-            self.moving.insert(binding);
-            self.mouse_motion += motion;
+        //if let Some(&binding) = self.bindings.get(&Switch::MouseMotion.into()) {
+        //self.moving.insert(binding);
 
-        }
+        self.mouse_motion += motion;
+        //}
     }
 
-    pub fn motion<T>(&self, key: T) -> Option<Vec2> where T: Into<AnyKey> {
-        if self.moving.contains(&key.into()) {
+    pub fn motion<T>(&self, key: T) -> Option<Vec2>
+    where
+        T: Into<AnyKey>,
+    {
+        if self.active(key.into()) {
             Some(self.mouse_motion)
         } else {
             None
         }
     }
 
-    pub fn just_pressed<T>(&self, key: T) -> bool 
-        where T: Into<AnyKey>
-    {
-        self.just_pressed.get(&key.into()).is_some()
-    }
-
-    pub fn just_released<T>(&self, key: T) -> bool 
-        where T: Into<AnyKey>
-    {
-        self.just_released.get(&key.into()).is_some()
-    }
-
     fn release(&mut self, key: Switch) {
-
-        self.pressed_.remove(&key);
-        self.just_released_.insert(key);
-
-        if self.modifier == Some(key) {
-            self.modifier = None;
-        }
-
-        if let Some(&binding) = self.binding(key) {
-            self.pressed.remove(&binding);
-            self.just_released.insert(binding);
+        if self.pressed_.remove(&key) {
+            self.just_released_.insert(key);
         }
     }
 
-    fn get_pressed(&self) -> Vec<&Box<dyn Action>> {
-        let mut res = vec!();
-        for item in self.pressed.iter() {
-            if let Some(obj) = self.boxed_types.get(item) {
-                res.push(obj);
-            };
-        }
-        res
+    fn get_active(&self) -> Vec<&Box<dyn Action>> {
+        self.active
+            .iter()
+            .filter_map(|key| self.boxed_types.get(key))
+            .collect()
     }
 
-    fn get_just_pressed(&self) -> Vec<&Box<dyn Action>> {
-        let mut res = vec!();
-        for item in self.just_pressed.iter() {
-            if let Some(obj) = self.boxed_types.get(item) {
-                res.push(obj);
-            };
-        }
-        res
+    fn get_just_activated(&self) -> Vec<&Box<dyn Action>> {
+        self.just_activated
+            .iter()
+            .filter_map(|key| self.boxed_types.get(key))
+            .collect()
     }
 
-    fn get_just_released(&self) -> Vec<&Box<dyn Action>> {
-        let mut res = vec!();
-        for item in self.just_released.iter() {
-            if let Some(obj) = self.boxed_types.get(item) {
-                res.push(obj);
-            };
-        }
-        res
+    fn get_just_deactivated(&self) -> Vec<&Box<dyn Action>> {
+        self.just_deactivated
+            .iter()
+            .filter_map(|key| self.boxed_types.get(key))
+            .collect()
     }
 }
 
-
 fn input_handling(
     mut inputs: ResMut<MappedInput>,
-    keys: Res<Input<KeyCode>>,
-    mouse: Res<Input<MouseButton>>,
+    mut keyboard_input: EventReader<bevy::input::keyboard::KeyboardInput>,
+    mut mouse_button: EventReader<bevy::input::mouse::MouseButtonInput>,
     mut mouse_motion: EventReader<MouseMotion>,
-    mouse_scroll: EventReader<MouseWheel>,
+    mut mouse_scroll: EventReader<MouseWheel>,
 ) {
     inputs.update();
 
-    let pressed  = 
-        keys.get_just_pressed().map(|&k| k.into())
-        .chain(mouse.get_just_pressed().map(|&b| b.into()));
-
-    let released  = 
-        keys.get_just_released().map(|&k| k.into())
-        .chain(mouse.get_just_released().map(|&b| b.into()));
-
-
-    let mut pressed_count = 0;
-    let mut released_count = 0;
-
-    for switch in pressed {
-        let added = inputs.press(switch);
-        debug!("{:?} {:?}", added, switch);
-        pressed_count += 1;
+    for event in keyboard_input.iter() {
+        if let &bevy::input::keyboard::KeyboardInput {
+            key_code: Some(key_code),
+            state,
+            ..
+        } = event
+        {
+            match state {
+                bevy::input::ElementState::Pressed => inputs.press(key_code.into()),
+                bevy::input::ElementState::Released => inputs.release(key_code.into()),
+            }
+        }
     }
 
-    for switch in released {
-        inputs.release(switch);
-        released_count += 1;
+    for event in mouse_button.iter() {
+        match event.state {
+            bevy::input::ElementState::Pressed => inputs.press(event.button.into()),
+            bevy::input::ElementState::Released => inputs.release(event.button.into()),
+        }
     }
 
-    //assert_eq!(inputs.get_just_pressed().len(), keys.get_just_pressed().len() + mouse.get_just_pressed().len());
-    //debug!("{:?} {:?} {:?}", inputs.get_just_pressed().len(), keys.get_just_pressed().len() + mouse.get_just_pressed().len(), count);
-    debug!("MyReleased: {:?}, ActualReleased: {:?}, Release Count: {:?}", inputs.get_just_released().len(), keys.get_just_released().len() + mouse.get_just_released().len(), released_count);
+    for event in mouse_motion.iter() {
+        inputs.moving(event.delta);
+    }
 
-    //for event in mouse_motion.iter() {
-    //    inputs.moving(event.delta);
-    //}
+    inputs.resolve();
 }
 
 #[derive(Hash, PartialEq, Eq, Debug, ToPrimitive, FromPrimitive, Clone, Copy)]
@@ -316,51 +430,74 @@ enum SomeKeyBindings {
     SomeAction,
     SomeOtherAction,
     SomeModifiedAction,
+    SomeOtherModifiedAction,
+    SomeDoubleModifiedAction,
 }
 
 #[derive(Hash, PartialEq, Eq, Debug, ToPrimitive, FromPrimitive, Clone, Copy)]
 enum SomeOtherKeyBindings {
     SomeAction,
-    SomeOtherAction
+    SomeOtherAction,
 }
 
-fn input<T, const K: KeyCode>(
-    mut write_key: EventWriter<KeyEvent<K>>,
-    mut inputs: ResMut<MappedInput>,
-) {
-    write_key.send(KeyEvent::<{ K }>(K));
+fn to_debug_edge(edge: &Edge, input: &MappedInput) -> String {
+    match *edge {
+        Edge::Action(a) => format!("{:?}", input.boxed_types.get(&a).unwrap()),
+        a => format!("{:?}", a),
+    }
 }
 
-fn debug_input(
-    mut inputs: ResMut<MappedInput>,
-) {
+fn to_debug_node(node: &Node, input: &MappedInput) -> String {
+    match *node {
+        a => format!("{:?}", a),
+    }
+}
 
-    //debug!("{:?}", *inputs);
-    //debug!("{:?}", inputs.modifier);
+fn debug_binding_graph(input: &MappedInput) {
+    let graph = input.bindings.clone().into_graph::<u32>();
+    let debug_graph = graph.map(
+        |i, n| to_debug_node(n, input),
+        |i, e| to_debug_edge(e, input),
+    );
+    let dot = petgraph::dot::Dot::new(&debug_graph);
 
-    //inputs.bind(KeyCode::A, SomeKeyBindings::SomeAction);
-    //inputs.bind(KeyCode::S, SomeKeyBindings::SomeAction);
-    //inputs.bind(KeyCode::D, SomeKeyBindings::SomeOtherAction);
+    let mut file = std::fs::File::create("bindings.dot").expect("Failed to create file");
+    std::io::Write::write_all(&mut file, format!("{:?}", dot).as_bytes())
+        .expect("Failed to write dot");
+    //file.write_all(dot);
+}
 
-    inputs.bind((KeyCode::LAlt, KeyCode::A), SomeKeyBindings::SomeModifiedAction);
-    inputs.bind((KeyCode::LAlt, MouseButton::Left), SomeKeyBindings::SomeModifiedAction);
+fn debug_input(mut inputs: ResMut<MappedInput>) {
+    inputs.bind(
+        (KeyCode::LAlt, KeyCode::A),
+        SomeKeyBindings::SomeModifiedAction,
+    );
+    inputs.bind(
+        (KeyCode::LAlt, MouseButton::Left),
+        SomeKeyBindings::SomeModifiedAction,
+    );
+
+    inputs.bind(
+        (KeyCode::RAlt, KeyCode::RControl, KeyCode::A),
+        SomeKeyBindings::SomeDoubleModifiedAction,
+    );
+
+    inputs.bind(
+        (KeyCode::RAlt, KeyCode::A),
+        SomeKeyBindings::SomeModifiedAction,
+    );
+
+    inputs.bind(
+        (KeyCode::RControl, KeyCode::A),
+        SomeKeyBindings::SomeOtherModifiedAction,
+    );
+
     inputs.bind(MouseButton::Left, SomeKeyBindings::SomeAction);
 
-    let key: AnyKey = SomeKeyBindings::SomeAction.into();
-    let anotherkey: AnyKey = SomeKeyBindings::SomeOtherAction.into();
+    debug!("Pressed: {:?}", inputs.get_active());
+    debug!("Just Pressed: {:?}", inputs.get_just_activated());
+    debug!("Just Released: {:?}", inputs.get_just_deactivated());
+    debug!("Layer: {:?}", inputs.layer);
 
-    debug!("Pressed: {:?}", inputs.get_pressed());
-    debug!("Just Pressed: {:?}", inputs.get_just_pressed());
-    debug!("Just Released: {:?}", inputs.get_just_released());
-
-
-    //debug!("{:?}", Wat::<{ KeyCode::A }, { TestEnum::A }> {});
-    //debug!("{:?}", Wat::<{ KeyCode::B }, { TestEnum::B }> {});
-    debug!("{:?}", KeyEvent::<{ KeyCode::A }>(KeyCode::B));
-    //debug!("{:?}", foo(KeyEvent::<{ KeyCode::B }>(KeyCode::A)));
-    //debug!("{:?}", foo(KeyEvent::<{ KeyCode::B }>(KeyCode::B)));
-    //debug!("{:?}", foo(KeyEvent::<{ KeyCode::A }>(KeyCode::A)));
-    //debug!("{:?}", foo(KeyEvent::<{ KeyCode::A }>(KeyCode::B)));
-
-    //debug!("{:?} {:?}", key, from_key::<SomeKeyBindings>(&key));
+    debug_binding_graph(&inputs);
 }

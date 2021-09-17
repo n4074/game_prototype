@@ -63,23 +63,29 @@ fn get_primary_window_size(windows: &Res<Windows>) -> Vec2 {
 }
 
 fn setup(mut inputmap: ResMut<crate::input::MappedInput>) {
-    inputmap.bind(KeyCode::A, Pan::Left);
-    inputmap.bind(KeyCode::D, Pan::Right);
-    inputmap.bind(KeyCode::W, Pan::Forward);
-    inputmap.bind(KeyCode::S, Pan::Backward);
-    inputmap.bind(KeyCode::LShift, Pan::Up);
-    inputmap.bind(KeyCode::LControl, Pan::Down);
+    inputmap.bind([KeyCode::A], Pan::Left);
+    inputmap.bind([KeyCode::D], Pan::Right);
+    inputmap.bind([KeyCode::W], Pan::Forward);
+    inputmap.bind([KeyCode::S], Pan::Backward);
+    inputmap.bind([KeyCode::LShift], Pan::Up);
+    inputmap.bind([KeyCode::LControl], Pan::Down);
 
     inputmap.bind(
-        (MouseButton::Right, crate::input::Switch::MouseMotion),
+        [
+            crate::input::Switch::from(MouseButton::Right),
+            crate::input::Switch::MouseMotion,
+        ],
         Controls::Orbit,
     );
     inputmap.bind(
-        (MouseButton::Middle, crate::input::Switch::MouseMotion),
+        [
+            crate::input::Switch::from(MouseButton::Middle),
+            crate::input::Switch::MouseMotion,
+        ],
         Controls::Pan,
     );
 
-    inputmap.bind(crate::input::Switch::MouseScroll, Controls::Zoom);
+    inputmap.bind([crate::input::Switch::MouseScroll], Controls::Zoom);
 }
 
 fn camera_movement(

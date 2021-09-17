@@ -1,3 +1,4 @@
+#![feature(derive_default_enum)]
 //#![feature(const_generics)]
 #![deny(unused_must_use)]
 #![deny(unused_imports)]

@@ -1,15 +1,16 @@
 use crate::SystemLabels;
 use bevy::input::mouse::{MouseMotion, MouseWheel};
 use bevy::prelude::*;
-use keymap::AnyKey;
+//use keymap::AnyKey;
 use num_derive::{FromPrimitive, ToPrimitive};
+//use num_traits::ToPrimitive;
+//use std::any::Any;
 use std::fmt::Debug;
+//use std::marker::PhantomData;
 
-mod graph;
-//mod graphmap;
-mod keymap;
+mod inputmap;
 
-pub(crate) use graph::{debug_binding_graph, MappedInput};
+pub(crate) use inputmap::{debug_binding_graph, MappedInput};
 
 pub struct InputPlugin;
 
@@ -24,50 +25,17 @@ impl Plugin for InputPlugin {
     }
 }
 
-//#[derive(Debug, Hash, PartialEq, Eq, Copy, Clone)]
-//pub enum Binding {
-//    Simple(Switch),
-//    Modified(Switch, Switch),
-//    DoubleModified(Switch, Switch, Switch),
-//}
-
-#[derive(Debug, Hash, PartialEq, Eq, Copy, Clone, Ord, PartialOrd)]
+#[derive(Debug, Hash, PartialEq, Eq, Copy, Clone)]
 pub enum Switch {
     Key(KeyCode),
-    Mouse(MouseButton_),
+    Mouse(MouseButton),
     MouseMotion,
     MouseScroll,
 }
 
-// bevy::input::mouse::MouseButton annoying doesn't implement Ord/PartialOrd which is required to use our graphmap
-#[derive(Eq, Ord, PartialEq, PartialOrd, Copy, Clone, Hash, Debug)]
-pub enum MouseButton_ {
-    Left,
-    Right,
-    Middle,
-    Other(u16),
-}
-
-impl From<MouseButton> for MouseButton_ {
-    fn from(button: MouseButton) -> Self {
-        match button {
-            MouseButton::Left => Self::Left,
-            MouseButton::Right => Self::Right,
-            MouseButton::Middle => Self::Middle,
-            MouseButton::Other(u16) => Self::Other(u16),
-        }
-    }
-}
-
-//impl From<Switch> for Binding {
-//    fn from(switch: Switch) -> Binding {
-//        Binding::Simple(switch)
-//    }
-//}
-
 impl From<MouseButton> for Switch {
     fn from(button: MouseButton) -> Self {
-        Switch::Mouse(button.into())
+        Switch::Mouse(button)
     }
 }
 
@@ -76,43 +44,6 @@ impl From<KeyCode> for Switch {
         Switch::Key(button)
     }
 }
-
-//impl From<MouseButton> for Binding {
-//    fn from(button: MouseButton) -> Binding {
-//        Binding::Simple(button.into())
-//    }
-//}
-//
-//impl From<KeyCode> for Binding {
-//    fn from(keycode: KeyCode) -> Binding {
-//        Binding::Simple(keycode.into())
-//    }
-//}
-//
-//impl<T, Q> From<(T, Q)> for Binding
-//where
-//    T: Into<Switch>,
-//    Q: Into<Switch>,
-//{
-//    fn from(keys: (T, Q)) -> Binding {
-//        Binding::Modified(keys.0.into(), keys.1.into())
-//    }
-//}
-//
-//impl<T, Q, R> From<(T, Q, R)> for Binding
-//where
-//    T: Into<Switch>,
-//    Q: Into<Switch>,
-//    R: Into<Switch>,
-//{
-//    fn from(keys: (T, Q, R)) -> Binding {
-//        Binding::DoubleModified(keys.0.into(), keys.1.into(), keys.2.into())
-//    }
-//}
-
-pub trait Action: Send + Sync + std::fmt::Debug {}
-
-impl Action for SomeKeyBindings {}
 
 fn input_handling(
     mut inputs: ResMut<MappedInput>,
@@ -197,5 +128,6 @@ fn setup_debug_input(mut inputs: ResMut<MappedInput>) {
 }
 
 fn debug_input(inputs: ResMut<MappedInput>) {
+    debug!("got here");
     debug_binding_graph(&inputs);
 }

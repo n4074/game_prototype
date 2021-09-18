@@ -1,55 +1,54 @@
-use super::{Action, AnyKey, Switch};
+use super::Switch;
 use bevy::prelude::Vec2;
+use num_traits::ToPrimitive;
 use petgraph::{
     graph::{DiGraph, NodeIndex},
     Direction,
 };
-use std::collections::{HashMap, HashSet};
+use std::{
+    any::TypeId,
+    collections::{HashMap, HashSet},
+};
 
 use log::debug;
 
-#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug)]
 enum Edge {
-    Action(AnyKey),
+    Action(ActionId),
     Layer,
 }
 
-//#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq, Default)]
-//enum Node {
-//    #[default]
-//    Root,
-//    Layer {
-//        active: u8,
-//        required: u8,
-//    },
-//}
-
-#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone)]
 struct Node {
     label: String,
     active: u8,
     threshold: u8,
 }
 
+type ActionId = (TypeId, u16);
+
+pub trait Action: 'static + ToPrimitive + Send + Sync + std::fmt::Debug {
+    fn to_id(&self) -> ActionId {
+        (TypeId::of::<Self>(), self.to_u16().unwrap())
+    }
+}
+
+impl<T: 'static + ToPrimitive + Send + Sync + std::fmt::Debug> Action for T {}
+
 #[derive(Debug, Default)]
 pub struct MappedInput {
-    boxed_types: HashMap<AnyKey, Box<dyn Action>>,
+    boxed_types: HashMap<ActionId, Box<dyn Action>>,
     bindings: DiGraph<Node, Edge>,
-    //layer: Option<Node>,
-    layer_depth: u8,
-    active: HashSet<AnyKey>,
-    just_activated: HashSet<AnyKey>,
-    just_deactivated: HashSet<AnyKey>,
-    pressed: HashSet<Switch>,
+    nodes: HashMap<Vec<Switch>, NodeIndex>,
+    active: HashSet<ActionId>,
+    just_activated: HashSet<ActionId>,
+    just_deactivated: HashSet<ActionId>,
     mouse_motion: Vec2,
     mouse_scroll: f32,
-    layer_count: u8,
-    nodes: HashMap<Vec<Switch>, NodeIndex>,
 }
 
 impl MappedInput {
     /// Bind an action to a key binding
-
     fn get_or_create_node(&mut self, keys: &[Switch]) -> NodeIndex {
         if let Some(&index) = self.nodes.get(keys) {
             return index;
@@ -66,30 +65,31 @@ impl MappedInput {
         index
     }
 
-    pub fn bind<I, T, S>(&mut self, keys: I, action: T)
+    pub fn bind<I, S>(&mut self, keys: I, action: impl Action + Copy)
     where
         S: Into<Switch>,
         I: IntoIterator<Item = S>,
-        T: Into<AnyKey> + Action + 'static + Copy + Clone,
     {
+        self.boxed_types.insert(action.to_id(), Box::new(action));
+
         let keys = keys.into_iter().map(|i| i.into()).collect::<Vec<Switch>>();
-        self.boxed_types.insert(action.into(), Box::new(action));
 
-        let (&terminator, layer) = keys[..].split_last().expect("Received empty binding");
+        let (&terminator, layer) = keys.split_last().expect("Received empty binding");
 
-        let terminator_node = self.get_or_create_node(&[terminator]);
+        let terminator_node = self.get_or_create_node(&[terminator.into()]);
 
-        let layer_node = self.get_or_create_node(layer);
+        let layer_node = self.get_or_create_node(&layer);
 
         // edge from switch to layer, with action
         self.bindings
-            .add_edge(terminator_node, layer_node, Edge::Action(action.into()));
+            .update_edge(terminator_node, layer_node, Edge::Action(action.to_id()));
 
         if layer.len() > 1 {
             for &switch in layer {
                 let switch_node = self.get_or_create_node(&[switch]);
 
-                self.bindings.add_edge(switch_node, layer_node, Edge::Layer);
+                self.bindings
+                    .update_edge(switch_node, layer_node, Edge::Layer);
             }
         }
     }
@@ -216,25 +216,16 @@ impl MappedInput {
         self.activate(key);
     }
 
-    pub fn just_activated<T>(&self, key: T) -> bool
-    where
-        T: Into<AnyKey>,
-    {
-        self.just_activated.get(&key.into()).is_some()
+    pub fn just_activated(&self, key: impl Action) -> bool {
+        self.just_activated.get(&key.to_id()).is_some()
     }
 
-    pub fn just_deactivated<T>(&self, key: T) -> bool
-    where
-        T: Into<AnyKey>,
-    {
-        self.just_deactivated.get(&key.into()).is_some()
+    pub fn just_deactivated(&self, key: impl Action) -> bool {
+        self.just_deactivated.get(&key.to_id()).is_some()
     }
 
-    pub fn active<T>(&self, key: T) -> bool
-    where
-        T: Into<AnyKey>,
-    {
-        self.active.get(&key.into()).is_some()
+    pub fn active(&self, key: impl Action) -> bool {
+        self.active.get(&key.to_id()).is_some()
     }
 
     pub fn move_mouse(&mut self, motion: Vec2) {
@@ -248,11 +239,8 @@ impl MappedInput {
         self.mouse_scroll += scroll;
     }
 
-    pub fn motion<T>(&self, key: T) -> Option<Vec2>
-    where
-        T: Into<AnyKey>,
-    {
-        let key: AnyKey = key.into();
+    pub fn motion(&self, key: impl Action) -> Option<Vec2> {
+        //let key: AnyKey = key.into();
         if self.active(key) {
             Some(self.mouse_motion)
         } else {
@@ -260,11 +248,8 @@ impl MappedInput {
         }
     }
 
-    pub fn scroll<T>(&self, key: T) -> Option<f32>
-    where
-        T: Into<AnyKey>,
-    {
-        if self.active(key.into()) {
+    pub fn scroll(&self, key: impl Action) -> Option<f32> {
+        if self.active(key) {
             Some(self.mouse_scroll)
         } else {
             None

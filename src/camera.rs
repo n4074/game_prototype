@@ -30,9 +30,6 @@ pub enum Controls {
     Zoom,
 }
 
-impl crate::input::Action for Pan {}
-impl crate::input::Action for Controls {}
-
 impl Default for CameraController {
     fn default() -> CameraController {
         CameraController {

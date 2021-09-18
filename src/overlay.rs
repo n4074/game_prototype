@@ -128,15 +128,15 @@ pub fn add_overlay_graph(
 
     pipelines.set_untracked(HEALTHBAR_PIPELINE_HANDLE, 
         PipelineDescriptor::default_config(ShaderStages {
-            vertex: asset_server.load::<Shader,_>("shaders/healthbar.vert"),
-            fragment: Some(asset_server.load::<Shader,_>("shaders/healthbar.frag")),
+            vertex: asset_server.load::<Shader,_>("shaders/overlay/healthbar.vert"),
+            fragment: Some(asset_server.load::<Shader,_>("shaders/overlay/healthbar.frag")),
         })
     );
 
     pipelines.set_untracked(ICON_PIPELINE_HANDLE, 
         PipelineDescriptor::default_config(ShaderStages {
-            vertex: asset_server.load::<Shader,_>("shaders/icon.vert"),
-            fragment: Some(asset_server.load::<Shader,_>("shaders/icon.frag")),
+            vertex: asset_server.load::<Shader,_>("shaders/overlay/icon.vert"),
+            fragment: Some(asset_server.load::<Shader,_>("shaders/overlay/icon.frag")),
         })
     );
 }

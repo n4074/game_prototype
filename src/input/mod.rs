@@ -6,7 +6,7 @@ use num_derive::{FromPrimitive, ToPrimitive};
 use std::fmt::Debug;
 
 mod graph;
-mod graphmap;
+//mod graphmap;
 mod keymap;
 
 pub(crate) use graph::{debug_binding_graph, MappedInput};
@@ -24,12 +24,12 @@ impl Plugin for InputPlugin {
     }
 }
 
-#[derive(Debug, Hash, PartialEq, Eq, Copy, Clone)]
-pub enum Binding {
-    Simple(Switch),
-    Modified(Switch, Switch),
-    DoubleModified(Switch, Switch, Switch),
-}
+//#[derive(Debug, Hash, PartialEq, Eq, Copy, Clone)]
+//pub enum Binding {
+//    Simple(Switch),
+//    Modified(Switch, Switch),
+//    DoubleModified(Switch, Switch, Switch),
+//}
 
 #[derive(Debug, Hash, PartialEq, Eq, Copy, Clone, Ord, PartialOrd)]
 pub enum Switch {
@@ -59,11 +59,11 @@ impl From<MouseButton> for MouseButton_ {
     }
 }
 
-impl From<Switch> for Binding {
-    fn from(switch: Switch) -> Binding {
-        Binding::Simple(switch)
-    }
-}
+//impl From<Switch> for Binding {
+//    fn from(switch: Switch) -> Binding {
+//        Binding::Simple(switch)
+//    }
+//}
 
 impl From<MouseButton> for Switch {
     fn from(button: MouseButton) -> Self {
@@ -77,61 +77,42 @@ impl From<KeyCode> for Switch {
     }
 }
 
-impl From<MouseButton> for Binding {
-    fn from(button: MouseButton) -> Binding {
-        Binding::Simple(button.into())
-    }
-}
-
-impl From<KeyCode> for Binding {
-    fn from(keycode: KeyCode) -> Binding {
-        Binding::Simple(keycode.into())
-    }
-}
-
-impl<T, Q> From<(T, Q)> for Binding
-where
-    T: Into<Switch>,
-    Q: Into<Switch>,
-{
-    fn from(keys: (T, Q)) -> Binding {
-        Binding::Modified(keys.0.into(), keys.1.into())
-    }
-}
-
-impl<T, Q, R> From<(T, Q, R)> for Binding
-where
-    T: Into<Switch>,
-    Q: Into<Switch>,
-    R: Into<Switch>,
-{
-    fn from(keys: (T, Q, R)) -> Binding {
-        Binding::DoubleModified(keys.0.into(), keys.1.into(), keys.2.into())
-    }
-}
+//impl From<MouseButton> for Binding {
+//    fn from(button: MouseButton) -> Binding {
+//        Binding::Simple(button.into())
+//    }
+//}
+//
+//impl From<KeyCode> for Binding {
+//    fn from(keycode: KeyCode) -> Binding {
+//        Binding::Simple(keycode.into())
+//    }
+//}
+//
+//impl<T, Q> From<(T, Q)> for Binding
+//where
+//    T: Into<Switch>,
+//    Q: Into<Switch>,
+//{
+//    fn from(keys: (T, Q)) -> Binding {
+//        Binding::Modified(keys.0.into(), keys.1.into())
+//    }
+//}
+//
+//impl<T, Q, R> From<(T, Q, R)> for Binding
+//where
+//    T: Into<Switch>,
+//    Q: Into<Switch>,
+//    R: Into<Switch>,
+//{
+//    fn from(keys: (T, Q, R)) -> Binding {
+//        Binding::DoubleModified(keys.0.into(), keys.1.into(), keys.2.into())
+//    }
+//}
 
 pub trait Action: Send + Sync + std::fmt::Debug {}
 
 impl Action for SomeKeyBindings {}
-
-#[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Copy, Clone)]
-enum Node {
-    Root,
-    Switch(Switch),
-    Layer(u8),
-}
-
-impl Default for Node {
-    fn default() -> Self {
-        Self::Root
-    }
-}
-
-#[derive(Debug, Copy, Clone)]
-enum Edge {
-    Action(AnyKey),
-    Layer(Node),
-}
 
 fn input_handling(
     mut inputs: ResMut<MappedInput>,

@@ -83,12 +83,14 @@ impl MappedInput {
 
         // edge from switch to layer, with action
         self.bindings
-            .add_edge(layer_node, terminator_node, Edge::Action(action.into()));
+            .add_edge(terminator_node, layer_node, Edge::Action(action.into()));
 
-        for &switch in layer {
-            let switch_node = self.get_or_create_node(&[switch]);
+        if layer.len() > 1 {
+            for &switch in layer {
+                let switch_node = self.get_or_create_node(&[switch]);
 
-            self.bindings.add_edge(switch_node, layer_node, Edge::Layer);
+                self.bindings.add_edge(switch_node, layer_node, Edge::Layer);
+            }
         }
     }
 
@@ -97,11 +99,21 @@ impl MappedInput {
         self.just_deactivated.clear();
         self.mouse_motion = Vec2::ZERO;
         self.mouse_scroll = 0f32;
+        self.deactivate(Switch::MouseMotion);
+        self.deactivate(Switch::MouseScroll);
     }
 
     /// Deactivate a bound action
     fn deactivate(&mut self, switch: Switch) {
         if let Some(&index) = self.nodes.get(&[switch].to_vec()) {
+            let node = &mut self.bindings[index];
+
+            if node.active == 0 {
+                // already inactive
+                return;
+            }
+            node.active -= 1;
+
             let mut neighbours = self
                 .bindings
                 .neighbors_directed(index, Direction::Outgoing)
@@ -116,24 +128,8 @@ impl MappedInput {
                             to_debug_node(&self.bindings[node], self)
                         );
                     }
-                    _ => {}
-                }
-            }
-
-            let mut ancestors = self
-                .bindings
-                .neighbors_directed(index, Direction::Incoming)
-                .detach();
-
-            while let Some((edge, node)) = ancestors.next(&self.bindings) {
-                match (self.bindings[edge], &mut self.bindings[node]) {
-                    (
-                        Edge::Action(action),
-                        Node {
-                            active, threshold, ..
-                        },
-                    ) => {
-                        if active >= threshold && self.active.remove(&action) {
+                    (Edge::Action(action), _) => {
+                        if self.active.remove(&action) {
                             self.just_deactivated.insert(action);
                             debug!(
                                 "Deactivating {}",
@@ -141,7 +137,6 @@ impl MappedInput {
                             );
                         }
                     }
-                    _ => {}
                 }
             }
         }
@@ -150,14 +145,24 @@ impl MappedInput {
     /// Activate a bound action
     fn activate(&mut self, switch: Switch) {
         // TODO: Get rid of this vec here. Maybe a bitmap?
-        // TODO: Get rid of this unwrap.
         if let Some(&index) = self.nodes.get(&[switch].to_vec()) {
-            debug!("Switch: {:?}", switch);
+            let node = &mut self.bindings[index];
+
+            if node.active != 0 {
+                return;
+            }
+
+            node.active += 1;
+
+            debug!("Pressing: {:?}", node);
 
             let mut neighbours = self
                 .bindings
                 .neighbors_directed(index, Direction::Outgoing)
                 .detach();
+
+            let mut highest_threshold = -1i32;
+            let mut target_action = None;
 
             while let Some((edge, node)) = neighbours.next(&self.bindings) {
                 match (self.bindings[edge], &mut self.bindings[node]) {
@@ -168,49 +173,38 @@ impl MappedInput {
                             to_debug_node(&self.bindings[node], self)
                         );
                     }
-                    _ => {}
-                }
-            }
-
-            let mut ancestors = self
-                .bindings
-                .neighbors_directed(index, Direction::Incoming)
-                .detach();
-
-            let mut highest_threshold = 0u8;
-            let mut target_action = None;
-
-            while let Some((edge, node)) = ancestors.next(&self.bindings) {
-                match (self.bindings[edge], &self.bindings[node]) {
                     (
                         Edge::Action(action),
                         Node {
-                            active, threshold, ..
+                            ref active,
+                            ref threshold,
+                            ..
                         },
-                    ) => {
-                        if active >= threshold {
-                            debug!("{:?} {:?}", threshold, highest_threshold);
-                            if *threshold < highest_threshold {
-                                debug!(
-                                    "Activating: {:?}",
-                                    to_debug_edge(&Edge::Action(action), &self)
-                                );
-                                target_action = Some(action);
-                                highest_threshold = *threshold;
-                            }
-                            // # TODO: Eventually we want our edges to be presorted
-                            // so we can break here;
-                            continue;
-                            if self.active.insert(action) {
-                                self.just_activated.insert(action);
-                                break;
-                            }
+                    ) if active >= threshold => {
+                        debug!(
+                            "Threshold: {:?} Active: {:?}, Max: {:?}",
+                            threshold, active, highest_threshold
+                        );
+                        // # TODO: Eventually we want our edges to be presorted
+                        // so we can break here;
+                        //if self.active.insert(action) {
+                        //    self.just_activated.insert(action);
+                        //    break;
+                        //}
+
+                        if (*threshold as i32) > highest_threshold {
+                            target_action = Some(action);
+                            highest_threshold = *threshold as i32;
                         }
                     }
                     _ => {}
                 }
             }
             if let Some(action) = target_action {
+                debug!(
+                    "Activating: {:?}",
+                    to_debug_edge(&Edge::Action(action), &self)
+                );
                 if self.active.insert(action) {
                     self.just_activated.insert(action);
                 }
@@ -219,10 +213,7 @@ impl MappedInput {
     }
 
     pub fn press(&mut self, key: Switch) {
-        if !self.pressed.contains(&key) {
-            self.activate(key);
-            self.pressed.insert(key);
-        }
+        self.activate(key);
     }
 
     pub fn just_activated<T>(&self, key: T) -> bool
@@ -248,20 +239,21 @@ impl MappedInput {
 
     pub fn move_mouse(&mut self, motion: Vec2) {
         // todo: Think about the performance here
-        //self.activate(Node::Switch(Switch::MouseMotion));
-        //self.mouse_motion += motion;
+        self.activate(Switch::MouseMotion);
+        self.mouse_motion += motion;
     }
 
     pub fn scroll_mouse(&mut self, scroll: f32) {
-        //self.activate(Node::Switch(Switch::MouseScroll));
-        //self.mouse_scroll += scroll;
+        self.activate(Switch::MouseScroll);
+        self.mouse_scroll += scroll;
     }
 
     pub fn motion<T>(&self, key: T) -> Option<Vec2>
     where
         T: Into<AnyKey>,
     {
-        if self.active(key.into()) {
+        let key: AnyKey = key.into();
+        if self.active(key) {
             Some(self.mouse_motion)
         } else {
             None
@@ -280,9 +272,7 @@ impl MappedInput {
     }
 
     pub fn release(&mut self, key: Switch) {
-        if self.pressed.remove(&key) {
-            self.deactivate(key);
-        }
+        self.deactivate(key);
     }
 
     fn get_active(&self) -> Vec<&Box<dyn Action>> {
@@ -321,15 +311,11 @@ fn to_debug_node(node: &Node, _input: &MappedInput) -> String {
 }
 
 pub(crate) fn debug_binding_graph(input: &MappedInput) {
-    let mut somemap = HashMap::new();
-    somemap.insert(vec![1], 1);
-    somemap.insert(vec![2], 2);
     //debug!("Pressed: {:?}", input.get_active());
     //debug!("Just Pressed: {:?}", input.get_just_activated());
     //debug!("Just Released: {:?}", input.get_just_deactivated());
     //debug!("Layer: {:?}", input.layer_depth);
     //debug!("Bindings: {:?}", input.nodes);
-    //debug!("Test: {:?}", somemap.get(&vec![2]));
 
     let graph = input.bindings.clone();
     let debug_graph = graph.map(
@@ -341,5 +327,4 @@ pub(crate) fn debug_binding_graph(input: &MappedInput) {
     let mut file = std::fs::File::create("bindings.dot").expect("Failed to create file");
     std::io::Write::write_all(&mut file, format!("{:?}", dot).as_bytes())
         .expect("Failed to write dot");
-    //file.write_all(dot);
 }

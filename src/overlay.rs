@@ -84,7 +84,6 @@ pub fn attach_ship_overlay(
         .spawn_bundle(MeshBundle {
             mesh: SIMPLE_QUAD_MESH_HANDLE.typed(),
             render_pipelines: RenderPipelines::from_handles(
-                //&[ICON_PIPELINE_HANDLE.typed(), HEALTHBAR_PIPELINE_HANDLE.typed()]
                 &[ICON_PIPELINE_HANDLE.typed(), HEALTHBAR_PIPELINE_HANDLE.typed()]
             ),
             visible: Visible {
@@ -103,13 +102,13 @@ pub fn attach_ship_overlay(
 pub const OVERLAY: &str = "Overlay";
 
 pub const HEALTHBAR_PIPELINE_HANDLE: HandleUntyped =
-    HandleUntyped::weak_from_u64(PipelineDescriptor::TYPE_UUID, 12976993416349439669);
+    HandleUntyped::weak_from_u64(PipelineDescriptor::TYPE_UUID, const_random::const_random!(u64));
 
 pub const ICON_PIPELINE_HANDLE: HandleUntyped =
-    HandleUntyped::weak_from_u64(PipelineDescriptor::TYPE_UUID, 1017551961862589956);
+    HandleUntyped::weak_from_u64(PipelineDescriptor::TYPE_UUID, const_random::const_random!(u64));
 
 pub const SIMPLE_QUAD_MESH_HANDLE: HandleUntyped =
-    HandleUntyped::weak_from_u64(Mesh::TYPE_UUID,12515628229712380851);
+    HandleUntyped::weak_from_u64(Mesh::TYPE_UUID,const_random::const_random!(u64));
 
 pub fn add_overlay_graph(
     render_graph: &mut RenderGraph,

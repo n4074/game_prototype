@@ -1,4 +1,4 @@
-#![cfg_attr(not(target_os = "macos"), feature = "derive_default_enum")]
+#![cfg_attr(not(target_os = "macos"), feature(derive_default_enum))]
 //#![feature(const_generics)]
 #![deny(unused_must_use)]
 #![warn(unused_imports)]
@@ -23,8 +23,8 @@ use movement::PlayerControllerPlugin;
 use overlay::HealthBarPlugin;
 use physics::PhysicsPlugin;
 use selection::SelectionPlugin;
-use skysphere::SkySpherePlugin;
 use ship::{spawn_ship, spawn_station};
+use skysphere::SkySpherePlugin;
 
 #[derive(SystemLabel, Clone, Debug, PartialEq, Eq, Hash)]
 enum SystemLabels {
@@ -99,7 +99,7 @@ fn setup(
     //let transform = Transform::from_xyz(5.0, -0.5, -0.5);
 
     spawn_ship(
-    Transform::from_xyz(5.0, -0.5, -0.5),
+        Transform::from_xyz(5.0, -0.5, -0.5),
         &mut commands,
         &mut asset_server,
         &mut overlay_materials,

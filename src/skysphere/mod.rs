@@ -1,13 +1,20 @@
-use bevy::{prelude::{*, shape::Cube}, reflect::TypeUuid, render::{pipeline::{self, DepthStencilState, PipelineDescriptor}, render_graph::{base, AssetRenderResourcesNode, RenderGraph}, renderer::RenderResources, shader::ShaderStages}};
+use bevy::{
+    prelude::{shape::Cube, *},
+    reflect::TypeUuid,
+    render::{
+        pipeline::{self, DepthStencilState, PipelineDescriptor},
+        render_graph::{base, AssetRenderResourcesNode, RenderGraph},
+        renderer::RenderResources,
+        shader::ShaderStages,
+    },
+};
 
 pub struct SkySpherePlugin;
 
 impl Plugin for SkySpherePlugin {
     fn build(&self, app: &mut AppBuilder) {
-        app
-            .add_startup_system(setup.system())
-            .add_asset::<SkySphere>()
-            ;
+        app.add_startup_system(setup.system())
+            .add_asset::<SkySphere>();
     }
 }
 
@@ -25,7 +32,7 @@ pub struct SkySphere {
 
 pub const PIPELINE_HANDLE: HandleUntyped = HandleUntyped::weak_from_u64(
     PipelineDescriptor::TYPE_UUID,
-    const_random::const_random!(u64)
+    const_random::const_random!(u64),
 );
 
 pub fn setup(
@@ -39,7 +46,7 @@ pub fn setup(
 ) {
     const SKYSPHERE: &'static str = "Skysphere";
 
-    let texture = asset_server.load("textures/skysphere/misty_pines_4k.png");
+    let texture = asset_server.load("textures/skysphere/monbachtal_riverbank_16k.hdr");
 
     let mut descriptor = PipelineDescriptor::default_config(ShaderStages {
         vertex: asset_server.load::<Shader, _>("shaders/skysphere/skysphere.vert"),
@@ -57,18 +64,14 @@ pub fn setup(
         .add_node_edge(SKYSPHERE, base::node::MAIN_PASS)
         .unwrap();
 
-    pipelines.set_untracked(
-        PIPELINE_HANDLE,
-        descriptor,
-    );
+    pipelines.set_untracked(PIPELINE_HANDLE, descriptor);
 
     commands.spawn_bundle(SkySphereBundle {
         ..Default::default()
     });
 
-
-    commands.spawn_bundle(
-        MeshBundle {
+    commands
+        .spawn_bundle(MeshBundle {
             mesh: meshes.add(shape::Quad::new(Vec2::new(2.0, 2.0)).into()),
             render_pipelines: RenderPipelines::from_handles(&[PIPELINE_HANDLE.typed()]),
             ..Default::default()

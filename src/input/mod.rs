@@ -128,6 +128,5 @@ fn setup_debug_input(mut inputs: ResMut<MappedInput>) {
 }
 
 fn debug_input(inputs: ResMut<MappedInput>) {
-    debug!("got here");
     debug_binding_graph(&inputs);
 }

@@ -49,21 +49,6 @@ pub struct MappedInput {
 
 impl MappedInput {
     /// Bind an action to a key binding
-    fn get_or_create_node(&mut self, keys: &[Switch]) -> NodeIndex {
-        if let Some(&index) = self.nodes.get(keys) {
-            return index;
-        }
-
-        let index = self.bindings.add_node(Node {
-            label: format!("{:?}", keys),
-            active: 0,
-            threshold: keys.len() as u8,
-        });
-
-        self.nodes.insert(keys.to_owned(), index);
-
-        index
-    }
 
     pub fn bind<I, S>(&mut self, keys: I, action: impl Action + Copy)
     where
@@ -94,7 +79,23 @@ impl MappedInput {
         }
     }
 
-    pub fn update(&mut self) {
+    fn get_or_create_node(&mut self, keys: &[Switch]) -> NodeIndex {
+        if let Some(&index) = self.nodes.get(keys) {
+            return index;
+        }
+
+        let index = self.bindings.add_node(Node {
+            label: format!("{:?}", keys),
+            active: 0,
+            threshold: keys.len() as u8,
+        });
+
+        self.nodes.insert(keys.to_owned(), index);
+
+        index
+    }
+
+    pub(crate) fn update(&mut self) {
         self.just_activated.clear();
         self.just_deactivated.clear();
         self.mouse_motion = Vec2::ZERO;
@@ -212,7 +213,7 @@ impl MappedInput {
         }
     }
 
-    pub fn press(&mut self, key: Switch) {
+    pub(crate) fn press(&mut self, key: Switch) {
         self.activate(key);
     }
 
@@ -226,17 +227,6 @@ impl MappedInput {
 
     pub fn active(&self, key: impl Action) -> bool {
         self.active.get(&key.to_id()).is_some()
-    }
-
-    pub fn move_mouse(&mut self, motion: Vec2) {
-        // todo: Think about the performance here
-        self.activate(Switch::MouseMotion);
-        self.mouse_motion += motion;
-    }
-
-    pub fn scroll_mouse(&mut self, scroll: f32) {
-        self.activate(Switch::MouseScroll);
-        self.mouse_scroll += scroll;
     }
 
     pub fn motion(&self, key: impl Action) -> Option<Vec2> {
@@ -256,25 +246,35 @@ impl MappedInput {
         }
     }
 
-    pub fn release(&mut self, key: Switch) {
+    pub(crate) fn move_mouse(&mut self, motion: Vec2) {
+        // todo: Think about the performance here
+        self.activate(Switch::MouseMotion);
+        self.mouse_motion += motion;
+    }
+
+    pub(crate) fn scroll_mouse(&mut self, scroll: f32) {
+        self.activate(Switch::MouseScroll);
+        self.mouse_scroll += scroll;
+    }
+    pub(crate) fn release(&mut self, key: Switch) {
         self.deactivate(key);
     }
 
-    fn get_active(&self) -> Vec<&Box<dyn Action>> {
+    pub(crate) fn get_active(&self) -> Vec<&Box<dyn Action>> {
         self.active
             .iter()
             .filter_map(|key| self.boxed_types.get(key))
             .collect()
     }
 
-    fn get_just_activated(&self) -> Vec<&Box<dyn Action>> {
+    pub(crate) fn get_just_activated(&self) -> Vec<&Box<dyn Action>> {
         self.just_activated
             .iter()
             .filter_map(|key| self.boxed_types.get(key))
             .collect()
     }
 
-    fn get_just_deactivated(&self) -> Vec<&Box<dyn Action>> {
+    pub(crate) fn get_just_deactivated(&self) -> Vec<&Box<dyn Action>> {
         self.just_deactivated
             .iter()
             .filter_map(|key| self.boxed_types.get(key))

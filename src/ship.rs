@@ -20,6 +20,30 @@ struct ShipBundle {
     pickable: PickableBundle,
 }
 
+pub fn spawn_station(
+    transform: Transform,
+    commands: &mut Commands,
+    asset_server: &mut AssetServer,
+    materials: &mut Assets<StandardMaterial>,
+) {
+    let cube_handle = asset_server.load("models/ships/station.gltf#Mesh0/Primitive0");
+
+    let material_handle = materials.add(StandardMaterial {
+        base_color: Color::rgb(1.0, 1.0, 1.0),
+        ..Default::default()
+    });
+    
+    commands
+        .spawn_bundle(
+            PbrBundle {
+                mesh: cube_handle,
+                material: material_handle,
+                transform,
+                ..Default::default()
+            }
+        );
+}
+
 pub fn spawn_ship(
     transform: Transform,
     commands: &mut Commands,

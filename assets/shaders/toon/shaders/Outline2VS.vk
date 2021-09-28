@@ -1,0 +1,19 @@
+// empty shader file
+#version 330
+
+uniform mat4 matVP;
+uniform mat4 matGeo;
+uniform mat4 matV;
+uniform vec4 colorIn;
+
+layout (location = 0) in vec3 pos;
+layout (location = 1) in vec3 normal;
+
+out float depth;
+out vec2 uv;
+
+
+void main() {
+   gl_Position = matVP *  matGeo * vec4(pos, 1);
+   
+}

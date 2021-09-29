@@ -11,7 +11,22 @@
 				<item value="Color" semantic="TEXCOORD0" />
 			</inputlayout>
 			<rendertexture />
-			<items />
+			<items>
+				<item name="YetAnotherCube" type="geometry">
+					<type>Cube</type>
+					<width>1</width>
+					<height>1</height>
+					<depth>1</depth>
+					<topology>TriangleList</topology>
+				</item>
+				<item name="YetAnotherSphere" type="geometry">
+					<type>Sphere</type>
+					<width>1</width>
+					<height>1</height>
+					<depth>1</depth>
+					<topology>TriangleList</topology>
+				</item>
+			</items>
 			<itemvalues />
 			<variables>
 				<variable type="float4x4" name="matGeo" system="GeometryTransform" />
@@ -29,32 +44,6 @@
 			</variables>
 			<macros />
 		</pass>
-		<pass name="DebugNormal" type="shader" active="false" patchverts="1">
-			<shader type="vs" path="shaders/ExtractNormalVS.glsl" entry="main" />
-			<shader type="ps" path="shaders/ExtractNormalPS.glsl" entry="main" />
-			<inputlayout>
-				<item value="Position" semantic="POSITION" />
-				<item value="Normal" semantic="NORMAL" />
-				<item value="Texcoord" semantic="TEXCOORD0" />
-			</inputlayout>
-			<rendertexture />
-			<items>
-				<item name="FullscreenNormal" type="geometry">
-					<type>ScreenQuadNDC</type>
-					<width>1</width>
-					<height>1</height>
-					<depth>1</depth>
-					<topology>TriangleList</topology>
-				</item>
-			</items>
-			<itemvalues />
-			<variables>
-				<variable type="float4x4" name="matVP" system="ViewProjection" />
-				<variable type="float4x4" name="matGeo" system="GeometryTransform" />
-				<variable type="float2" name="viewPort" system="ViewportSize" />
-			</variables>
-			<macros />
-		</pass>
 		<pass name="Normal" type="shader" active="true" patchverts="1">
 			<shader type="vs" path="shaders/DepthVS.glsl" entry="main" />
 			<shader type="ps" path="shaders/DepthPS.glsl" entry="main" />
@@ -67,11 +56,44 @@
 			<rendertexture name="depthTexture" />
 			<rendertexture name="normalTexture" />
 			<items>
+				<item name="YetAnotherRenderState" type="renderstate">
+					<blend>false</blend>
+					<alpha2coverage>false</alpha2coverage>
+					<colorsrcfactor>Source Alpha</colorsrcfactor>
+					<colordstfactor>Inverse Source Alpha</colordstfactor>
+					<colorfunc>Add</colorfunc>
+					<alphasrcfactor>Source Alpha</alphasrcfactor>
+					<alphadstfactor>Inverse Source Alpha</alphadstfactor>
+					<alphafunc>Add</alphafunc>
+					<blendfactor_r>1</blendfactor_r>
+					<blendfactor_g>1</blendfactor_g>
+					<blendfactor_b>1</blendfactor_b>
+					<blendfactor_a>1</blendfactor_a>
+					<depthtest>true</depthtest>
+					<depthclamp>true</depthclamp>
+					<depthmask>true</depthmask>
+					<depthfunc>Less</depthfunc>
+					<depthbias>0</depthbias>
+					<stenciltest>false</stenciltest>
+					<stencilmask>0</stencilmask>
+					<stencilref>255</stencilref>
+					<stencilfrontfunc>Equal</stencilfrontfunc>
+					<stencilbackfunc>Equal</stencilbackfunc>
+					<stencilfrontpass>Keep</stencilfrontpass>
+					<stencilbackpass>Keep</stencilbackpass>
+					<stencilfrontfail>Keep</stencilfrontfail>
+					<stencilbackfail>Keep</stencilbackfail>
+					<depthfrontfail>Keep</depthfrontfail>
+					<depthbackfail>Keep</depthbackfail>
+				</item>
 				<item name="Box" type="geometry">
 					<type>Cube</type>
 					<width>1</width>
 					<height>1</height>
 					<depth>1</depth>
+					<scaleX>10</scaleX>
+					<scaleY>10</scaleY>
+					<scaleZ>10</scaleZ>
 					<pitch>0.785398185</pitch>
 					<yaw>0.785398185</yaw>
 					<x>2.73429346</x>
@@ -86,7 +108,10 @@
 				<item name="Station" type="model">
 					<filepath>../../models/ships/station.gltf</filepath>
 					<grouponly>false</grouponly>
-					<x>-2.29836559</x>
+					<scaleX>20</scaleX>
+					<scaleY>20</scaleY>
+					<scaleZ>20</scaleZ>
+					<x>-20</x>
 				</item>
 				<item name="Sphere" type="geometry">
 					<type>Sphere</type>
@@ -107,6 +132,11 @@
 					<y>1.66510952</y>
 					<topology>TriangleList</topology>
 				</item>
+				<item name="ISS" type="model">
+					<filepath>ISS_stationary.glb</filepath>
+					<grouponly>false</grouponly>
+					<x>20</x>
+				</item>
 			</items>
 			<itemvalues />
 			<variables>
@@ -121,11 +151,24 @@
 						<value>0</value>
 					</row>
 				</variable>
-				<variable type="float3" name="cameraPos" system="CameraPosition3" />
+				<variable type="float3" name="cameraPos" function="ObjectProperty">
+					<row>
+						<value>Box</value>
+						<value>Position</value>
+					</row>
+				</variable>
 				<variable type="float3" name="lightPos">
 					<row>
+						<value>30</value>
+						<value>30</value>
 						<value>0</value>
-						<value>0</value>
+					</row>
+				</variable>
+				<variable type="float4" name="objectColour">
+					<row>
+						<value>1</value>
+						<value>0.999989986</value>
+						<value>0.999999046</value>
 						<value>0</value>
 					</row>
 				</variable>
@@ -142,7 +185,63 @@
 			</inputlayout>
 			<rendertexture />
 			<items>
+				<item name="RenderState" type="renderstate">
+					<blend>false</blend>
+					<alpha2coverage>false</alpha2coverage>
+					<colorsrcfactor>Source Alpha</colorsrcfactor>
+					<colordstfactor>Inverse Source Alpha</colordstfactor>
+					<colorfunc>Add</colorfunc>
+					<alphasrcfactor>Destination Alpha</alphasrcfactor>
+					<alphadstfactor>Source Alpha</alphadstfactor>
+					<alphafunc>Add</alphafunc>
+					<blendfactor_r>1</blendfactor_r>
+					<blendfactor_g>1</blendfactor_g>
+					<blendfactor_b>1</blendfactor_b>
+					<blendfactor_a>1</blendfactor_a>
+					<depthtest>true</depthtest>
+					<depthclamp>true</depthclamp>
+					<depthmask>true</depthmask>
+					<depthfunc>Less</depthfunc>
+					<depthbias>0</depthbias>
+					<stenciltest>false</stenciltest>
+					<stencilmask>0</stencilmask>
+					<stencilref>255</stencilref>
+					<stencilfrontfunc>Equal</stencilfrontfunc>
+					<stencilbackfunc>Equal</stencilbackfunc>
+					<stencilfrontpass>Keep</stencilfrontpass>
+					<stencilbackpass>Keep</stencilbackpass>
+					<stencilfrontfail>Keep</stencilfrontfail>
+					<stencilbackfail>Keep</stencilbackfail>
+					<depthfrontfail>Keep</depthfrontfail>
+					<depthbackfail>Keep</depthbackfail>
+				</item>
 				<item name="Fullscreen" type="geometry">
+					<type>ScreenQuadNDC</type>
+					<width>1</width>
+					<height>1</height>
+					<depth>1</depth>
+					<topology>TriangleList</topology>
+				</item>
+			</items>
+			<itemvalues />
+			<variables>
+				<variable type="float4x4" name="matVP" system="ViewProjection" />
+				<variable type="float4x4" name="matGeo" system="GeometryTransform" />
+				<variable type="float2" name="viewPort" system="ViewportSize" />
+			</variables>
+			<macros />
+		</pass>
+		<pass name="DebugNormal" type="shader" active="false" patchverts="1">
+			<shader type="vs" path="shaders/ExtractNormalVS.glsl" entry="main" />
+			<shader type="ps" path="shaders/ExtractNormalPS.glsl" entry="main" />
+			<inputlayout>
+				<item value="Position" semantic="POSITION" />
+				<item value="Normal" semantic="NORMAL" />
+				<item value="Texcoord" semantic="TEXCOORD0" />
+			</inputlayout>
+			<rendertexture />
+			<items>
+				<item name="FullscreenNormal" type="geometry">
 					<type>ScreenQuadNDC</type>
 					<width>1</width>
 					<height>1</height>
@@ -179,7 +278,7 @@
 			<itemvalues>
 				<value variable="viewPort" for="FullscreenDepth">
 					<row>
-						<value>1441</value>
+						<value>935</value>
 						<value>1681</value>
 					</row>
 				</value>
@@ -193,46 +292,48 @@
 		</pass>
 	</pipeline>
 	<objects>
-		<object type="rendertexture" name="depthTexture" format="R32_FLOAT" rsize="1.000000,1.000000" clear="true">
+		<object type="rendertexture" name="depthTexture" format="R32_FLOAT" rsize="1.000000,1.000000" clear="true" r="0.00392156886">
+			<bind slot="0" name="Outline" />
 			<bind slot="0" name="DebugDepth" />
 		</object>
 		<object type="rendertexture" name="normalTexture" format="R32G32B32_FLOAT" rsize="1.000000,1.000000" clear="true">
+			<bind slot="1" name="Outline" />
 			<bind slot="0" name="DebugNormal" />
-			<bind slot="0" name="Outline" />
 		</object>
-		<object type="rendertexture" name="screenHide" rsize="1.000000,1.000000" clear="true" />
+		<object type="rendertexture" name="screenHide" rsize="1.000000,1.000000" clear="true">
+			<bind slot="2" name="Outline" />
+		</object>
 	</objects>
 	<cameras />
 	<settings>
-		<entry type="file" name="Normal" shader="vs" />
-		<entry type="file" name="DebugNormal" shader="ps" />
-		<entry type="file" name="Outline" shader="ps" />
 		<entry type="file" name="Outline" shader="vs" />
-		<entry type="file" name="DebugNormal" shader="vs" />
-		<entry type="file" name="Normal" shader="ps" />
-		<entry type="file" name="DebugDepth" shader="vs" />
-		<entry type="file" name="DebugDepth" shader="ps" />
+		<entry type="file" name="Outline" shader="ps" />
+		<entry type="pinned" name="objectColour" owner="Normal" />
 		<entry type="camera" fp="false">
-			<distance>7</distance>
-			<pitch>-2</pitch>
-			<yaw>210</yaw>
+			<distance>50</distance>
+			<pitch>22</pitch>
+			<yaw>259</yaw>
 			<roll>360</roll>
 		</entry>
 		<entry type="clearcolor" r="0.498223484" g="0.486795038" b="0.486795038" a="0" />
 		<entry type="usealpha" val="false" />
 		<entry type="watch_expr" expr="" />
+		<entry type="bkpt" file="/home/user/projects/game_prototype/assets/shaders/toon/shaders/DepthVS.glsl" line="19" use_cond="false" cond="" enabled="true" />
+		<entry type="bkpt" file="/home/user/projects/game_prototype/assets/shaders/toon/shaders/DepthVS.glsl" line="18" use_cond="false" cond="" enabled="true" />
+		<entry type="bkpt" file="/home/user/projects/game_prototype/assets/shaders/toon/shaders/DepthVS.glsl" line="17" use_cond="false" cond="" enabled="true" />
 		<entry type="bkpt" file="/home/user/projects/game_prototype/assets/shaders/toon/shaders/ExtractDepthPS.glsl" line="9" use_cond="false" cond="" enabled="true" />
-		<entry type="bkpt" file="/home/user/projects/game_prototype/assets/shaders/toon/shaders/DepthPS.glsl" line="12" use_cond="false" cond="" enabled="true" />
-		<entry type="bkpt" file="/home/user/projects/game_prototype/assets/shaders/toon/shaders/DepthPS.glsl" line="11" use_cond="false" cond="" enabled="true" />
-		<entry type="bkpt" file="/home/user/projects/game_prototype/assets/shaders/toon/shaders/DepthPS.glsl" line="15" use_cond="false" cond="" enabled="true" />
+		<entry type="bkpt" file="/home/user/projects/game_prototype/assets/shaders/toon/shaders/DepthPS.glsl" line="66" use_cond="false" cond="" enabled="true" />
+		<entry type="bkpt" file="/home/user/projects/game_prototype/assets/shaders/toon/shaders/DepthPS.glsl" line="65" use_cond="false" cond="" enabled="true" />
+		<entry type="bkpt" file="/home/user/projects/game_prototype/assets/shaders/toon/shaders/DepthPS.glsl" line="64" use_cond="false" cond="" enabled="true" />
+		<entry type="bkpt" file="/home/user/projects/game_prototype/assets/shaders/toon/shaders/DepthPS.glsl" line="63" use_cond="false" cond="" enabled="true" />
+		<entry type="bkpt" file="/home/user/projects/game_prototype/assets/shaders/toon/shaders/DepthPS.glsl" line="62" use_cond="false" cond="" enabled="true" />
+		<entry type="bkpt" file="/home/user/projects/game_prototype/assets/shaders/toon/shaders/DepthPS.glsl" line="61" use_cond="false" cond="" enabled="true" />
+		<entry type="bkpt" file="/home/user/projects/game_prototype/assets/shaders/toon/shaders/DepthPS.glsl" line="60" use_cond="false" cond="" enabled="true" />
 		<entry type="bkpt" file="/home/user/projects/game_prototype/assets/shaders/toon/shaders/OutlinePS.glsl" line="99" use_cond="false" cond="" enabled="true" />
 		<entry type="bkpt" file="/home/user/projects/game_prototype/assets/shaders/toon/shaders/OutlinePS.glsl" line="98" use_cond="false" cond="" enabled="true" />
 		<entry type="bkpt" file="/home/user/projects/game_prototype/assets/shaders/toon/shaders/OutlinePS.glsl" line="86" use_cond="false" cond="" enabled="true" />
 		<entry type="bkpt" file="/home/user/projects/game_prototype/assets/shaders/toon/shaders/OutlinePS.glsl" line="97" use_cond="false" cond="" enabled="true" />
 		<entry type="bkpt" file="/home/user/projects/game_prototype/assets/shaders/toon/shaders/OutlinePS.glsl" line="85" use_cond="false" cond="" enabled="true" />
-		<entry type="bkpt" file="/home/user/projects/game_prototype/assets/shaders/toon/shaders/DepthVS.glsl" line="19" use_cond="false" cond="" enabled="true" />
-		<entry type="bkpt" file="/home/user/projects/game_prototype/assets/shaders/toon/shaders/DepthVS.glsl" line="18" use_cond="false" cond="" enabled="true" />
-		<entry type="bkpt" file="/home/user/projects/game_prototype/assets/shaders/toon/shaders/DepthVS.glsl" line="17" use_cond="false" cond="" enabled="true" />
 	</settings>
 	<plugindata />
 </project>

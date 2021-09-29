@@ -8,14 +8,16 @@
 #define gaussian_blur mat3(1, 2, 1, 2, 4, 2, 1, 2, 1) * 0.0625
 #define emboss mat3(-2, -1, 0, -1, 1, 1, 0, 1, 2)
 
+#define sobel_gx mat3(1,0,-1,2,0,-2,1,0,-1)
+#define sobel_gy mat3(1,2,1,0,0,0,-1,-2,-1)
+
 uniform sampler2D depthTexture;
 uniform sampler2D normalTexture;
+uniform sampler2D screenTexture;
 
 uniform vec2 viewPort;
 out vec4 outColor;
-
-// Find coordinate of matrix element from index
-vec2 kpos(int index)
+vec2 neighbours(int index)
 {
     return vec2[9] (
         vec2(-1, -1), vec2(0, -1), vec2(1, -1),
@@ -24,7 +26,8 @@ vec2 kpos(int index)
     )[index] / viewPort.xy;
 }
 
-vec2 neighbour(int index)
+
+vec2 neighbour_wo(int index)
 {
     return vec2[8] (
         vec2(-1, -1), vec2(0, -1), vec2(1, -1),
@@ -33,17 +36,14 @@ vec2 neighbour(int index)
     )[index] / viewPort.xy;
 }
 
-// Extract region of dimension 3x3 from sampler centered in uv
-// sampler : texture sampler
-// uv : current coordinates on sampler
-// return : an array of mat3, each index corresponding with a color channel
 mat3[3] region3x3(sampler2D sampler, vec2 uv)
 {
     // Create each pixels for region
     vec4[9] region;
     
-    for (int i = 0; i < 9; i++)
-        region[i] = texture(sampler, uv + kpos(i));
+    for (int i = 0; i < 9; i++) {
+        region[i] = texture(sampler, uv + neighbours(i));
+	}
 
     // Create 3x3 region with 3 color channels (red, green, blue)
     mat3[3] mRegion;
@@ -58,10 +58,6 @@ mat3[3] region3x3(sampler2D sampler, vec2 uv)
     return mRegion;
 }
 
-// Convolve a texture with kernel
-// kernel : kernel used for convolution
-// sampler : texture sampler
-// uv : current coordinates on sampler
 vec4 convolution(mat3 kernel, sampler2D sampler, vec2 uv)
 {
     vec4 fragment;
@@ -82,7 +78,55 @@ vec4 convolution(mat3 kernel, sampler2D sampler, vec2 uv)
                 + c[0][1] + c[1][1] + c[2][1]
                 + c[0][2] + c[1][2] + c[2][2];
         
-        // for fragment at channel i, set result
+        fragment[i] = r;
+    }
+    
+    return fragment;    
+}
+
+float normalDifference(sampler2D sampler, vec2 uv)
+{
+    float[9] norms;
+    
+    float normDiff = 0.0;
+    
+    vec3 center = vec3(texture(sampler, uv));
+    
+    for (int i = 0; i < 8; i++) {
+        vec3 texel = vec3(texture(sampler, uv + neighbour_wo(i)));
+        
+        normDiff += distance(center, texel);
+	}
+    
+    return normDiff;    
+}
+
+vec3 sobel(sampler2D sampler, vec2 uv) {
+	vec3 gx = vec3(convolution(sobel_gx, sampler, uv));
+	vec3 gy = vec3(convolution(sobel_gy, sampler, uv));
+	
+	return gx * gx + gy * gy;
+}
+
+vec4 convolutionDotProduct(mat3 kernel, sampler2D sampler, vec2 uv)
+{
+    vec4 fragment;
+    float threshold = 0.07;
+    
+    // Extract a 3x3 region centered in uv
+    mat3[3] region = region3x3(sampler, uv);
+    
+    // for each color channel of region
+    for (int i = 0; i < 3; i++)
+    {
+        // get region channel
+        mat3 c = region[i];
+        // component wise multiplication of kernel by region channel
+       //mat3 c = matrixCompMult(kernel, rc);
+        // add each component of matrix
+        float r = c[0][0] + c[1][0] + c[2][0]
+                + c[0][1] + c[1][1] + c[2][1]
+                + c[0][2] + c[1][2] + c[2][2];
         
         fragment[i] = r;
     }
@@ -90,55 +134,58 @@ vec4 convolution(mat3 kernel, sampler2D sampler, vec2 uv)
     return fragment;    
 }
 
-const vec2[8] neighbors = vec2[8](
-    vec2(-1, -1), vec2(0, -1), vec2(1, -1),
-    vec2(-1, 0), vec2(1, 0), 
-    vec2(-1, 1), vec2(0, 1), vec2(1, 1)
-);
 
-float max_angle(sampler2D sampler, vec2 uv) {
-	float angle = 1.0;
-	float ave = 0.0;
-	
-	vec3 center = normalize(texture(sampler, uv).xyz);
-	
-	for (int i = 0; i < 8; i++) {
-		vec3 neighbor = normalize(texture(sampler, uv + neighbour(i)).xyz);
-		float local_angle = abs(dot(center, neighbor));
-		ave += local_angle;
-		angle = max(angle, local_angle);
-	}
-	return ave / 8;
+vec2 screen_uv() {
+	return gl_FragCoord.xy / viewPort.xy;
 }
 
-const float threshold = 0.99;
+const float threshold = 0.001;
 void main() {
-	vec2 uv = gl_FragCoord.xy / viewPort.xy;
-	vec2 offset = vec2(1, 1) / viewPort.xy;
-	vec3 center = normalize(texture(normalTexture, uv).xyz);
-	vec3 n = normalize(texture(normalTexture, uv + (0, offset.y)).xyz);
-	vec3 s = normalize(texture(normalTexture, uv + (0, - offset.y)).xyz);
-	vec3 e = normalize(texture(normalTexture, uv + (offset.x, 0)).xyz);
-	vec3 w = normalize(texture(normalTexture, uv + (- offset.x, 0)).xyz);
+	vec2 uv = screen_uv();
 	
-	float n_dot = abs(dot(center, n));
-	float s_dot = abs(dot(center, s));
-	float e_dot = abs(dot(center, e));
-	float w_dot = abs(dot(center, w));
-	//vec4 color = convolution(edge2, depthTexture, gl_FragCoord.xy / viewPort.xy);
-	//float maxAngle = maximum_dotproduct(normalTexture, uv);
-	//float angle = min(min(min(n_dot, s_dot), e_dot), w_dot);
-	float angle = max_angle(normalTexture, uv);
-	//float line = float(maxAngle < 0.05);
+	vec4 normC = convolution(edge2, normalTexture, uv);
+	vec4 depthC = convolution(edge2, depthTexture, uv);
 	
-	if (angle < threshold) {
-		outColor = vec4(0.0, 1.0, 0.0,1.0);
-	} else {
-		outColor = vec4(0.0);
-	}
-	vec4 conv = convolution(edge2, depthTexture, uv);
-	float lum = max(max(conv.x,conv.y), conv.z);
-	outColor = vec4(vec3(lum), 1.0);
+	
+	float normX = abs(normC.x);
+	float normY = abs(normC.y);
+	float normZ = abs(normC.z);
+	float average = (normC.x + normC.y + normC.z) / 1;
+	float dropZ = normC.x + normC.y;
+	float normalDiff_ = normalDifference(normalTexture, uv);
+	
+	
+	float depth = abs(depthC.x);
+	//depth = float(depth > threshold);
+	vec3 sobel = sobel(normalTexture, uv);
+	float[1] one = float[1](1);
 
+	vec3[10] samples = vec3[10] (
+		vec3(step(0.9, normalDiff_)),
+		vec3(mix(smoothstep(0.0, 0.01, depth), normalDiff_, 0.2)),
+		vec3(average),
+		vec3(sobel),
+		vec3(length(sobel)),
+		vec3(dropZ),
+		vec3(length(normC.y)),
+		vec3(length(normC)),
+		vec3(mix(smoothstep(0.0, 0.01, depth), length(normC), 0.2)),
+		vec3(smoothstep(0.0, 0.5, sobel))
+	);
+	
+	vec3 final = samples[2];
+	
+	//gl_FragDepth = 0.01;
+	
+	float lineThreshold = 0.01;
+	
+	vec4 screen = texture(screenTexture, uv);
+	
+	if (max(max(final.x, final.y), final.z) > lineThreshold) {
+		outColor = vec4(vec3(step(length(final), lineThreshold)), 1.0);
+		//outColor = vec4(final, 1.0);
+	} else {
+		outColor = screen;
+	}
 }
  

@@ -1,0 +1,327 @@
+<?xml version="1.0"?>
+<project version="2">
+	<pipeline>
+		<pass name="Simple" type="shader" active="false" patchverts="1">
+			<shader type="vs" path="shaders/toon_SimpleVS.glsl" entry="main" />
+			<shader type="ps" path="shaders/toon_SimplePS.glsl" entry="main" />
+			<inputlayout>
+				<item value="Position" semantic="POSITION" />
+				<item value="Normal" semantic="NORMAL" />
+				<item value="Texcoord" semantic="TEXCOORD0" />
+				<item value="Color" semantic="TEXCOORD0" />
+			</inputlayout>
+			<rendertexture />
+			<items>
+				<item name="YetAnotherCube" type="geometry">
+					<type>Cube</type>
+					<width>1</width>
+					<height>1</height>
+					<depth>1</depth>
+					<topology>TriangleList</topology>
+				</item>
+				<item name="YetAnotherSphere" type="geometry">
+					<type>Sphere</type>
+					<width>1</width>
+					<height>1</height>
+					<depth>1</depth>
+					<topology>TriangleList</topology>
+				</item>
+			</items>
+			<itemvalues />
+			<variables>
+				<variable type="float4x4" name="matGeo" system="GeometryTransform" />
+				<variable type="float4x4" name="matVP" system="ViewProjection" />
+				<variable type="float4x4" name="matV" system="View" />
+				<variable type="float4" name="colorIn">
+					<row>
+						<value>0</value>
+						<value>0</value>
+						<value>0</value>
+						<value>0</value>
+					</row>
+				</variable>
+				<variable type="float3" name="cameraPos" system="CameraPosition3" />
+			</variables>
+			<macros />
+		</pass>
+		<pass name="Normal" type="shader" active="true" patchverts="1">
+			<shader type="vs" path="../assets/shaders/toon/toon.vert" entry="main" />
+			<shader type="ps" path="../assets/shaders/toon/toon.frag" entry="main" />
+			<inputlayout>
+				<item value="Position" semantic="POSITION" />
+				<item value="Normal" semantic="NORMAL" />
+				<item value="Texcoord" semantic="TEXCOORD0" />
+			</inputlayout>
+			<rendertexture />
+			<rendertexture name="depthTexture" />
+			<rendertexture name="normalTexture" />
+			<items>
+				<item name="RenderState2" type="renderstate">
+					<blend>false</blend>
+					<alpha2coverage>false</alpha2coverage>
+					<colorsrcfactor>Source Alpha</colorsrcfactor>
+					<colordstfactor>Inverse Source Alpha</colordstfactor>
+					<colorfunc>Add</colorfunc>
+					<alphasrcfactor>Source Alpha</alphasrcfactor>
+					<alphadstfactor>Inverse Source Alpha</alphadstfactor>
+					<alphafunc>Add</alphafunc>
+					<blendfactor_r>1</blendfactor_r>
+					<blendfactor_g>1</blendfactor_g>
+					<blendfactor_b>1</blendfactor_b>
+					<blendfactor_a>1</blendfactor_a>
+					<depthtest>true</depthtest>
+					<depthclamp>true</depthclamp>
+					<depthmask>true</depthmask>
+					<depthfunc>Less</depthfunc>
+					<depthbias>0</depthbias>
+					<stenciltest>false</stenciltest>
+					<stencilmask>0</stencilmask>
+					<stencilref>255</stencilref>
+					<stencilfrontfunc>Equal</stencilfrontfunc>
+					<stencilbackfunc>Equal</stencilbackfunc>
+					<stencilfrontpass>Keep</stencilfrontpass>
+					<stencilbackpass>Keep</stencilbackpass>
+					<stencilfrontfail>Keep</stencilfrontfail>
+					<stencilbackfail>Keep</stencilbackfail>
+					<depthfrontfail>Keep</depthfrontfail>
+					<depthbackfail>Keep</depthbackfail>
+				</item>
+				<item name="Box" type="geometry">
+					<type>Cube</type>
+					<width>1</width>
+					<height>1</height>
+					<depth>1</depth>
+					<scaleX>10</scaleX>
+					<scaleY>10</scaleY>
+					<scaleZ>10</scaleZ>
+					<pitch>0.785398185</pitch>
+					<yaw>0.785398185</yaw>
+					<x>2.73429346</x>
+					<y>1.40871835</y>
+					<z>-50</z>
+					<topology>TriangleList</topology>
+				</item>
+				<item name="Dragon" type="model">
+					<filepath>../../../Documents/models/dragon_recon/dragon3.gltf</filepath>
+					<grouponly>false</grouponly>
+				</item>
+				<item name="Sphere" type="geometry">
+					<type>Sphere</type>
+					<width>1</width>
+					<height>1</height>
+					<depth>1</depth>
+					<pitch>1.57079637</pitch>
+					<yaw>0.0174532924</yaw>
+					<x>2.9490819</x>
+					<z>-0.0227341652</z>
+					<topology>TriangleList</topology>
+				</item>
+				<item name="AnotherCube" type="geometry">
+					<type>Cube</type>
+					<width>1</width>
+					<height>1</height>
+					<depth>1</depth>
+					<y>1.66510952</y>
+					<topology>TriangleList</topology>
+				</item>
+				<item name="ISS" type="model">
+					<filepath>test_models/ISS_stationary.gltf</filepath>
+					<grouponly>false</grouponly>
+					<x>-70</x>
+				</item>
+			</items>
+			<itemvalues />
+			<variables>
+				<variable type="float4x4" name="matVP" system="ViewProjection" />
+				<variable type="float4x4" name="matGeo" system="GeometryTransform" />
+				<variable type="float4x4" name="matV" system="View" />
+				<variable type="float3" name="cameraPos" system="CameraPosition3" />
+				<variable type="float3" name="lightPos">
+					<row>
+						<value>30</value>
+						<value>30</value>
+						<value>0</value>
+					</row>
+				</variable>
+				<variable type="float4" name="objectColour">
+					<row>
+						<value>1</value>
+						<value>0.999997973</value>
+						<value>0.999989986</value>
+						<value>0</value>
+					</row>
+				</variable>
+				<variable type="float4" name="colorIn">
+					<row>
+						<value>0</value>
+						<value>0</value>
+						<value>0</value>
+						<value>0</value>
+					</row>
+				</variable>
+			</variables>
+			<macros />
+		</pass>
+		<pass name="DebugNormal" type="shader" active="false" patchverts="1">
+			<shader type="vs" path="shaders/ExtractNormalVS.glsl" entry="main" />
+			<shader type="ps" path="shaders/ExtractNormalPS.glsl" entry="main" />
+			<inputlayout>
+				<item value="Position" semantic="POSITION" />
+				<item value="Normal" semantic="NORMAL" />
+				<item value="Texcoord" semantic="TEXCOORD0" />
+			</inputlayout>
+			<rendertexture />
+			<items>
+				<item name="FullscreenNormal" type="geometry">
+					<type>ScreenQuadNDC</type>
+					<width>1</width>
+					<height>1</height>
+					<depth>1</depth>
+					<topology>TriangleList</topology>
+				</item>
+			</items>
+			<itemvalues />
+			<variables>
+				<variable type="float4x4" name="matVP" system="ViewProjection" />
+				<variable type="float4x4" name="matGeo" system="GeometryTransform" />
+				<variable type="float2" name="viewPort" system="ViewportSize" />
+			</variables>
+			<macros />
+		</pass>
+		<pass name="DebugDepth" type="shader" active="false" patchverts="1">
+			<shader type="vs" path="shaders/ExtractDepthVS.glsl" entry="main" />
+			<shader type="ps" path="shaders/ExtractDepthPS.glsl" entry="main" />
+			<inputlayout>
+				<item value="Position" semantic="POSITION" />
+				<item value="Normal" semantic="NORMAL" />
+				<item value="Texcoord" semantic="TEXCOORD0" />
+			</inputlayout>
+			<rendertexture />
+			<items>
+				<item name="FullscreenDepth" type="geometry">
+					<type>ScreenQuadNDC</type>
+					<width>1</width>
+					<height>1</height>
+					<depth>1</depth>
+					<topology>TriangleList</topology>
+				</item>
+			</items>
+			<itemvalues>
+				<value variable="viewPort" for="FullscreenDepth">
+					<row>
+						<value>1330</value>
+						<value>1681</value>
+					</row>
+				</value>
+			</itemvalues>
+			<variables>
+				<variable type="float4x4" name="matVP" system="ViewProjection" />
+				<variable type="float4x4" name="matGeo" system="GeometryTransform" />
+				<variable type="float2" name="viewPort" system="ViewportSize" />
+			</variables>
+			<macros />
+		</pass>
+		<pass name="Outline" type="shader" active="true" patchverts="1">
+			<shader type="vs" path="../assets/shaders/screenquad.vert" entry="main" />
+			<shader type="ps" path="../assets/shaders/toon/outline.frag" entry="main" />
+			<inputlayout>
+				<item value="Position" semantic="POSITION" />
+				<item value="Normal" semantic="NORMAL" />
+				<item value="Texcoord" semantic="TEXCOORD0" />
+			</inputlayout>
+			<rendertexture />
+			<items>
+				<item name="RenderState" type="renderstate">
+					<blend>false</blend>
+					<alpha2coverage>false</alpha2coverage>
+					<colorsrcfactor>Source Alpha</colorsrcfactor>
+					<colordstfactor>Inverse Source Alpha</colordstfactor>
+					<colorfunc>Add</colorfunc>
+					<alphasrcfactor>Destination Alpha</alphasrcfactor>
+					<alphadstfactor>Source Alpha</alphadstfactor>
+					<alphafunc>Add</alphafunc>
+					<blendfactor_r>1</blendfactor_r>
+					<blendfactor_g>1</blendfactor_g>
+					<blendfactor_b>1</blendfactor_b>
+					<blendfactor_a>1</blendfactor_a>
+					<depthtest>true</depthtest>
+					<depthclamp>true</depthclamp>
+					<depthmask>true</depthmask>
+					<depthfunc>Less</depthfunc>
+					<depthbias>0</depthbias>
+					<stenciltest>false</stenciltest>
+					<stencilmask>0</stencilmask>
+					<stencilref>255</stencilref>
+					<stencilfrontfunc>Equal</stencilfrontfunc>
+					<stencilbackfunc>Equal</stencilbackfunc>
+					<stencilfrontpass>Keep</stencilfrontpass>
+					<stencilbackpass>Keep</stencilbackpass>
+					<stencilfrontfail>Keep</stencilfrontfail>
+					<stencilbackfail>Keep</stencilbackfail>
+					<depthfrontfail>Keep</depthfrontfail>
+					<depthbackfail>Keep</depthbackfail>
+				</item>
+				<item name="Fullscreen" type="geometry">
+					<type>ScreenQuadNDC</type>
+					<width>1</width>
+					<height>1</height>
+					<depth>1</depth>
+					<topology>TriangleList</topology>
+				</item>
+			</items>
+			<itemvalues />
+			<variables>
+				<variable type="float4x4" name="matVP" system="ViewProjection" />
+				<variable type="float4x4" name="matGeo" system="GeometryTransform" />
+				<variable type="float2" name="viewPort" system="ViewportSize" />
+			</variables>
+			<macros />
+		</pass>
+	</pipeline>
+	<objects>
+		<object type="rendertexture" name="depthTexture" format="R32_FLOAT" rsize="1.000000,1.000000" clear="true" r="0.00392156886">
+			<bind slot="0" name="DebugDepth" />
+		</object>
+		<object type="rendertexture" name="normalTexture" format="R32G32B32_FLOAT" rsize="1.000000,1.000000" clear="true">
+			<bind slot="0" name="DebugNormal" />
+		</object>
+		<object type="rendertexture" name="screenHide" rsize="1.000000,1.000000" clear="true" />
+	</objects>
+	<cameras />
+	<settings>
+		<entry type="property" name="Normal" item="pipe" />
+		<entry type="file" name="Outline" shader="vs" />
+		<entry type="file" name="Outline" shader="ps" />
+		<entry type="file" name="Simple" shader="vs" />
+		<entry type="file" name="Simple" shader="ps" />
+		<entry type="pinned" name="objectColour" owner="Normal" />
+		<entry type="pinned" name="colorIn" owner="Normal" />
+		<entry type="camera" fp="true">
+			<positionX>-52.2560043</positionX>
+			<positionY>17.6751709</positionY>
+			<positionZ>40.228405</positionZ>
+			<yaw>-339.048798</yaw>
+			<pitch>-16.1000214</pitch>
+		</entry>
+		<entry type="clearcolor" r="0.498223484" g="0.486795038" b="0.486795038" a="0" />
+		<entry type="usealpha" val="false" />
+		<entry type="watch_expr" expr="" />
+		<entry type="bkpt" file="/home/user/projects/game_prototype/assets/shaders/toon/shaders/OutlinePS.glsl" line="99" use_cond="false" cond="" enabled="true" />
+		<entry type="bkpt" file="/home/user/projects/game_prototype/assets/shaders/toon/shaders/OutlinePS.glsl" line="98" use_cond="false" cond="" enabled="true" />
+		<entry type="bkpt" file="/home/user/projects/game_prototype/assets/shaders/toon/shaders/OutlinePS.glsl" line="86" use_cond="false" cond="" enabled="true" />
+		<entry type="bkpt" file="/home/user/projects/game_prototype/assets/shaders/toon/shaders/OutlinePS.glsl" line="97" use_cond="false" cond="" enabled="true" />
+		<entry type="bkpt" file="/home/user/projects/game_prototype/assets/shaders/toon/shaders/OutlinePS.glsl" line="85" use_cond="false" cond="" enabled="true" />
+		<entry type="bkpt" file="/home/user/projects/game_prototype/assets/shaders/toon/shaders/DepthVS.glsl" line="19" use_cond="false" cond="" enabled="true" />
+		<entry type="bkpt" file="/home/user/projects/game_prototype/assets/shaders/toon/shaders/DepthVS.glsl" line="18" use_cond="false" cond="" enabled="true" />
+		<entry type="bkpt" file="/home/user/projects/game_prototype/assets/shaders/toon/shaders/DepthVS.glsl" line="17" use_cond="false" cond="" enabled="true" />
+		<entry type="bkpt" file="/home/user/projects/game_prototype/assets/shaders/toon/shaders/ExtractDepthPS.glsl" line="9" use_cond="false" cond="" enabled="true" />
+		<entry type="bkpt" file="/home/user/projects/game_prototype/assets/shaders/toon/shaders/DepthPS.glsl" line="80" use_cond="false" cond="" enabled="true" />
+		<entry type="bkpt" file="/home/user/projects/game_prototype/assets/shaders/toon/shaders/DepthPS.glsl" line="79" use_cond="false" cond="" enabled="true" />
+		<entry type="bkpt" file="/home/user/projects/game_prototype/assets/shaders/toon/shaders/DepthPS.glsl" line="78" use_cond="false" cond="" enabled="true" />
+		<entry type="bkpt" file="/home/user/projects/game_prototype/assets/shaders/toon/shaders/DepthPS.glsl" line="77" use_cond="false" cond="" enabled="true" />
+		<entry type="bkpt" file="/home/user/projects/game_prototype/assets/shaders/toon/shaders/DepthPS.glsl" line="76" use_cond="false" cond="" enabled="true" />
+		<entry type="bkpt" file="/home/user/projects/game_prototype/assets/shaders/toon/shaders/DepthPS.glsl" line="75" use_cond="false" cond="" enabled="true" />
+		<entry type="bkpt" file="/home/user/projects/game_prototype/assets/shaders/toon/shaders/DepthPS.glsl" line="74" use_cond="false" cond="" enabled="true" />
+	</settings>
+	<plugindata />
+</project>

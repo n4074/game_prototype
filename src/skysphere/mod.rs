@@ -1,8 +1,8 @@
 use bevy::{
-    prelude::{shape::Cube, *},
+    prelude::*,
     reflect::TypeUuid,
     render::{
-        pipeline::{self, DepthStencilState, PipelineDescriptor},
+        pipeline::{self, PipelineDescriptor},
         render_graph::{base, AssetRenderResourcesNode, RenderGraph},
         renderer::RenderResources,
         shader::ShaderStages,
@@ -41,12 +41,11 @@ pub fn setup(
     asset_server: Res<AssetServer>,
     mut pipelines: ResMut<Assets<PipelineDescriptor>>,
     mut meshes: ResMut<Assets<Mesh>>,
-    mut colormaterial: ResMut<Assets<StandardMaterial>>,
     mut skysphere: ResMut<Assets<SkySphere>>,
 ) {
     const SKYSPHERE: &'static str = "Skysphere";
 
-    let texture = asset_server.load("textures/skysphere/monbachtal_riverbank_16k.hdr");
+    let texture = asset_server.load("textures/skysphere/skysphere1.mantra1.png");
 
     let mut descriptor = PipelineDescriptor::default_config(ShaderStages {
         vertex: asset_server.load::<Shader, _>("shaders/skysphere/skysphere.vert"),

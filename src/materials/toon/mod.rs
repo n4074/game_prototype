@@ -13,18 +13,46 @@ pub struct ToonPlugin;
 
 impl Plugin for ToonPlugin {
     fn build(&self, app: &mut AppBuilder) {
-        app.add_startup_system(setup.system()).add_asset::<Toon>();
+        app.add_asset::<Toon>().add_startup_system(setup.system());
     }
 }
 
 #[derive(RenderResources, Default, TypeUuid)]
 #[uuid = "3bf9e364-f29d-4d6c-92cf-932983663333"]
-pub struct Toon {}
+pub struct Toon {
+    pub something: f32,
+}
 
-pub const PIPELINE_HANDLE: HandleUntyped = HandleUntyped::weak_from_u64(
+pub const TOON_PIPELINE_HANDLE: HandleUntyped = HandleUntyped::weak_from_u64(
     PipelineDescriptor::TYPE_UUID,
     const_random::const_random!(u64),
 );
+
+const VERTEX_SHADER: &str = r#"
+#version 450
+layout(location = 0) in vec3 Vertex_Position;
+
+layout(set = 0, binding = 0) uniform CameraViewProj {
+    mat4 ViewProj;
+};
+layout(set = 1, binding = 0) uniform Transform {
+    mat4 Model;
+};
+void main() {
+    gl_Position = ViewProj * Model * vec4(Vertex_Position, 1.0);
+}
+"#;
+
+const FRAGMENT_SHADER: &str = r#"
+#version 450
+layout(location = 0) out vec4 o_Target;
+void main() {
+    o_Target = vec4(1.0, 0.0, 0.0, 1.0);
+}
+"#;
+
+const TOON_VERTEX_SHADER_PATH: &str = "shaders/toon/shaders/toon/toon.vert";
+const TOON_FRAGMENT_SHADER_PATH: &str = "shaders/toon/shaders/toon/toon.frag";
 
 pub fn setup(
     mut commands: Commands,

@@ -5,8 +5,8 @@
 mod camera;
 mod debug;
 mod input;
+mod materials;
 mod movement;
-mod overlay;
 mod physics;
 mod selection;
 mod ship;
@@ -19,8 +19,11 @@ use bevy::prelude::*;
 use bevy_mod_picking::*;
 use camera::CameraControlPlugin;
 use input::InputPlugin;
+use materials::{
+    overlay::{Overlay, OverlayPlugin},
+    toon::ToonPlugin,
+};
 use movement::PlayerControllerPlugin;
-use overlay::HealthBarPlugin;
 use physics::PhysicsPlugin;
 use selection::SelectionPlugin;
 use ship::{spawn_ship, spawn_station};
@@ -38,7 +41,7 @@ fn main() {
     log::debug!("Launching...");
 
     App::build()
-        .insert_resource(Msaa { samples: 4 })
+        .insert_resource(Msaa { samples: 8 })
         .add_plugins(DefaultPlugins)
         //.add_plugin(GamePlugins)
         .add_plugin(StartupPlugin)
@@ -48,11 +51,12 @@ fn main() {
         .add_plugin(HighlightablePickingPlugin)
         .add_plugin(PhysicsPlugin)
         .add_plugin(PlayerControllerPlugin)
-        .add_plugin(HealthBarPlugin)
+        .add_plugin(OverlayPlugin)
         .add_plugin(SelectionPlugin)
         .add_plugin(InputPlugin)
         .add_plugin(SkySpherePlugin)
-        .add_plugin(crate::debug::DebugPlugin)
+        .add_plugin(debug::DebugPlugin)
+        .add_plugin(ToonPlugin)
         //.insert_resource(ClearColor(Color::BLACK))
         .run();
 }
@@ -69,7 +73,7 @@ fn setup(
     mut commands: Commands,
     mut asset_server: ResMut<AssetServer>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    mut overlay_materials: ResMut<Assets<overlay::Overlay>>,
+    mut overlay_materials: ResMut<Assets<Overlay>>,
     mut ambient_light: ResMut<bevy::pbr::AmbientLight>,
 ) {
     //debug!("Ambient_light: {:?}", ambient_light.color);

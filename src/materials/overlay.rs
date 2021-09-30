@@ -4,19 +4,18 @@ use bevy::{
     reflect::TypeUuid,
     render::{
         mesh::shape,
-        pipeline::{PipelineDescriptor},
+        pipeline::PipelineDescriptor,
         render_graph::{base, AssetRenderResourcesNode, RenderGraph},
         renderer::RenderResources,
-        shader::{ShaderStages, ShaderDefs},
+        shader::{ShaderDefs, ShaderStages},
     },
 };
 
-pub struct HealthBarPlugin;
+pub struct OverlayPlugin;
 
-impl Plugin for HealthBarPlugin {
+impl Plugin for OverlayPlugin {
     fn build(&self, app: &mut AppBuilder) {
-        app
-            .add_asset::<Overlay>()
+        app.add_asset::<Overlay>()
             .add_system(toggle_overlay_global.system())
             .add_startup_system(setup.system());
     }
@@ -41,10 +40,13 @@ fn setup(
 ) {
     add_overlay_graph(&mut render_graph, &asset_server, &mut pipelines);
 
-    meshes.set_untracked(SIMPLE_QUAD_MESH_HANDLE, Mesh::from(shape::Quad {
-        size: bevy::math::vec2(1.0, 1.0),
-        flip: false,
-    }));
+    meshes.set_untracked(
+        SIMPLE_QUAD_MESH_HANDLE,
+        Mesh::from(shape::Quad {
+            size: bevy::math::vec2(1.0, 1.0),
+            flip: false,
+        }),
+    );
 }
 
 pub fn toggle_overlay_global(
@@ -55,26 +57,25 @@ pub fn toggle_overlay_global(
         for &child in children.iter() {
             let (mut visible, _) = child_overlay.get_mut(child).expect("Failed to get visible");
             visible.is_visible = selected.is_some();
-            
         }
     }
 }
 
 pub fn attach_ship_overlay(
-    ship: Entity, 
-    commands: &mut Commands, 
+    ship: Entity,
+    commands: &mut Commands,
     asset_server: &AssetServer,
     overlay_materials: &mut Assets<Overlay>,
 ) {
     let texture_handle = asset_server.load("textures/unit_overlays/test.png");
 
     let overlay_material = overlay_materials.add(Overlay {
-        healthbar_transform: GlobalTransform { 
-            scale: vec3(2.0, 0.1, 0.0), 
+        healthbar_transform: GlobalTransform {
+            scale: vec3(2.0, 0.1, 0.0),
             translation: vec3(0.0, 1.0, 0.0),
-            ..GlobalTransform::default() 
+            ..GlobalTransform::default()
         },
-        healthbar_fill: 0.5, 
+        healthbar_fill: 0.5,
         icon_colour: Color::rgb(0.0, 1.0, 0.0),
         icon_texture: Some(texture_handle.clone()),
         ..Overlay::default()
@@ -83,9 +84,10 @@ pub fn attach_ship_overlay(
     let overlay = commands
         .spawn_bundle(MeshBundle {
             mesh: SIMPLE_QUAD_MESH_HANDLE.typed(),
-            render_pipelines: RenderPipelines::from_handles(
-                &[ICON_PIPELINE_HANDLE.typed(), HEALTHBAR_PIPELINE_HANDLE.typed()]
-            ),
+            render_pipelines: RenderPipelines::from_handles(&[
+                ICON_PIPELINE_HANDLE.typed(),
+                HEALTHBAR_PIPELINE_HANDLE.typed(),
+            ]),
             visible: Visible {
                 is_visible: false,
                 is_transparent: true,
@@ -97,45 +99,47 @@ pub fn attach_ship_overlay(
         .id();
 
     commands.entity(ship).push_children(&[overlay]);
-} 
+}
 
 pub const OVERLAY: &str = "Overlay";
 
-pub const HEALTHBAR_PIPELINE_HANDLE: HandleUntyped =
-    HandleUntyped::weak_from_u64(PipelineDescriptor::TYPE_UUID, const_random::const_random!(u64));
+pub const HEALTHBAR_PIPELINE_HANDLE: HandleUntyped = HandleUntyped::weak_from_u64(
+    PipelineDescriptor::TYPE_UUID,
+    const_random::const_random!(u64),
+);
 
-pub const ICON_PIPELINE_HANDLE: HandleUntyped =
-    HandleUntyped::weak_from_u64(PipelineDescriptor::TYPE_UUID, const_random::const_random!(u64));
+pub const ICON_PIPELINE_HANDLE: HandleUntyped = HandleUntyped::weak_from_u64(
+    PipelineDescriptor::TYPE_UUID,
+    const_random::const_random!(u64),
+);
 
 pub const SIMPLE_QUAD_MESH_HANDLE: HandleUntyped =
-    HandleUntyped::weak_from_u64(Mesh::TYPE_UUID,const_random::const_random!(u64));
+    HandleUntyped::weak_from_u64(Mesh::TYPE_UUID, const_random::const_random!(u64));
 
 pub fn add_overlay_graph(
     render_graph: &mut RenderGraph,
     asset_server: &Res<AssetServer>,
     pipelines: &mut Assets<PipelineDescriptor>,
 ) {
+    render_graph.add_system_node(OVERLAY, AssetRenderResourcesNode::<Overlay>::new(true));
 
-    render_graph.add_system_node(
-        OVERLAY,
-        AssetRenderResourcesNode::<Overlay>::new(true),
-    );
- 
-    render_graph    
+    render_graph
         .add_node_edge(OVERLAY, base::node::MAIN_PASS)
         .unwrap();
 
-    pipelines.set_untracked(HEALTHBAR_PIPELINE_HANDLE, 
+    pipelines.set_untracked(
+        HEALTHBAR_PIPELINE_HANDLE,
         PipelineDescriptor::default_config(ShaderStages {
-            vertex: asset_server.load::<Shader,_>("shaders/overlay/healthbar.vert"),
-            fragment: Some(asset_server.load::<Shader,_>("shaders/overlay/healthbar.frag")),
-        })
+            vertex: asset_server.load::<Shader, _>("shaders/overlay/healthbar.vert"),
+            fragment: Some(asset_server.load::<Shader, _>("shaders/overlay/healthbar.frag")),
+        }),
     );
 
-    pipelines.set_untracked(ICON_PIPELINE_HANDLE, 
+    pipelines.set_untracked(
+        ICON_PIPELINE_HANDLE,
         PipelineDescriptor::default_config(ShaderStages {
-            vertex: asset_server.load::<Shader,_>("shaders/overlay/icon.vert"),
-            fragment: Some(asset_server.load::<Shader,_>("shaders/overlay/icon.frag")),
-        })
+            vertex: asset_server.load::<Shader, _>("shaders/overlay/icon.vert"),
+            fragment: Some(asset_server.load::<Shader, _>("shaders/overlay/icon.frag")),
+        }),
     );
 }

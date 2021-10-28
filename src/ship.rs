@@ -25,6 +25,7 @@ pub fn spawn_station(
     commands: &mut Commands,
     asset_server: &mut AssetServer,
     materials: &mut Assets<StandardMaterial>,
+    color: &mut Assets<ColorMaterial>,
 ) {
     let station_handle = asset_server.load("models/ships/iss/ISS_stationary.gltf#Mesh0/Primitive0");
 
@@ -33,12 +34,26 @@ pub fn spawn_station(
         ..Default::default()
     });
 
-    commands.spawn_bundle(PbrBundle {
-        mesh: station_handle,
-        material: material_handle,
-        transform,
-        ..Default::default()
-    });
+    //commands.spawn_bundle(PbrBundle {
+    //    mesh: station_handle,
+    //    material: material_handle,
+    //    transform,
+    //    ..Default::default()
+    //});
+
+    //commands.spawn_bundle(MeshBundle {});
+    commands
+        .spawn_bundle(MeshBundle {
+            mesh: station_handle,
+            render_pipelines: RenderPipelines::from_handles(&[
+                crate::materials::toon::TOON_PIPELINE_HANDLE.typed(),
+            ]),
+            ..Default::default()
+        })
+        .insert(color.add(ColorMaterial {
+            color: Color::RED,
+            ..Default::default()
+        }));
 }
 
 pub fn spawn_ship(

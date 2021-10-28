@@ -290,10 +290,10 @@
 	<cameras />
 	<settings>
 		<entry type="property" name="Normal" item="pipe" />
-		<entry type="file" name="Outline" shader="vs" />
-		<entry type="file" name="Outline" shader="ps" />
 		<entry type="file" name="Simple" shader="vs" />
 		<entry type="file" name="Simple" shader="ps" />
+		<entry type="file" name="Normal" shader="ps" />
+		<entry type="file" name="Normal" shader="vs" />
 		<entry type="pinned" name="objectColour" owner="Normal" />
 		<entry type="pinned" name="colorIn" owner="Normal" />
 		<entry type="camera" fp="true">
@@ -306,15 +306,15 @@
 		<entry type="clearcolor" r="0.498223484" g="0.486795038" b="0.486795038" a="0" />
 		<entry type="usealpha" val="false" />
 		<entry type="watch_expr" expr="" />
+		<entry type="bkpt" file="/home/user/projects/game_prototype/assets/shaders/toon/shaders/ExtractDepthPS.glsl" line="9" use_cond="false" cond="" enabled="true" />
+		<entry type="bkpt" file="/home/user/projects/game_prototype/assets/shaders/toon/shaders/DepthVS.glsl" line="19" use_cond="false" cond="" enabled="true" />
+		<entry type="bkpt" file="/home/user/projects/game_prototype/assets/shaders/toon/shaders/DepthVS.glsl" line="18" use_cond="false" cond="" enabled="true" />
+		<entry type="bkpt" file="/home/user/projects/game_prototype/assets/shaders/toon/shaders/DepthVS.glsl" line="17" use_cond="false" cond="" enabled="true" />
 		<entry type="bkpt" file="/home/user/projects/game_prototype/assets/shaders/toon/shaders/OutlinePS.glsl" line="99" use_cond="false" cond="" enabled="true" />
 		<entry type="bkpt" file="/home/user/projects/game_prototype/assets/shaders/toon/shaders/OutlinePS.glsl" line="98" use_cond="false" cond="" enabled="true" />
 		<entry type="bkpt" file="/home/user/projects/game_prototype/assets/shaders/toon/shaders/OutlinePS.glsl" line="86" use_cond="false" cond="" enabled="true" />
 		<entry type="bkpt" file="/home/user/projects/game_prototype/assets/shaders/toon/shaders/OutlinePS.glsl" line="97" use_cond="false" cond="" enabled="true" />
 		<entry type="bkpt" file="/home/user/projects/game_prototype/assets/shaders/toon/shaders/OutlinePS.glsl" line="85" use_cond="false" cond="" enabled="true" />
-		<entry type="bkpt" file="/home/user/projects/game_prototype/assets/shaders/toon/shaders/DepthVS.glsl" line="19" use_cond="false" cond="" enabled="true" />
-		<entry type="bkpt" file="/home/user/projects/game_prototype/assets/shaders/toon/shaders/DepthVS.glsl" line="18" use_cond="false" cond="" enabled="true" />
-		<entry type="bkpt" file="/home/user/projects/game_prototype/assets/shaders/toon/shaders/DepthVS.glsl" line="17" use_cond="false" cond="" enabled="true" />
-		<entry type="bkpt" file="/home/user/projects/game_prototype/assets/shaders/toon/shaders/ExtractDepthPS.glsl" line="9" use_cond="false" cond="" enabled="true" />
 		<entry type="bkpt" file="/home/user/projects/game_prototype/assets/shaders/toon/shaders/DepthPS.glsl" line="80" use_cond="false" cond="" enabled="true" />
 		<entry type="bkpt" file="/home/user/projects/game_prototype/assets/shaders/toon/shaders/DepthPS.glsl" line="79" use_cond="false" cond="" enabled="true" />
 		<entry type="bkpt" file="/home/user/projects/game_prototype/assets/shaders/toon/shaders/DepthPS.glsl" line="78" use_cond="false" cond="" enabled="true" />

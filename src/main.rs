@@ -73,6 +73,7 @@ fn setup(
     mut commands: Commands,
     mut asset_server: ResMut<AssetServer>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    mut color: ResMut<Assets<ColorMaterial>>,
     mut overlay_materials: ResMut<Assets<Overlay>>,
     mut ambient_light: ResMut<bevy::pbr::AmbientLight>,
 ) {
@@ -86,8 +87,8 @@ fn setup(
                     continue;
                 }
 
-                let transform =
-                    Transform::from_xyz(-i as f32 * 1.001, j as f32 * 1.001, k as f32 * 1.001);
+                //let transform =
+                //    Transform::from_xyz(-i as f32 * 1.001, j as f32 * 1.001, k as f32 * 1.001);
 
                 //spawn_ship(
                 //    transform,
@@ -111,10 +112,11 @@ fn setup(
     );
 
     spawn_station(
-        Transform::from_xyz(0.0, 0.0, 0.0),
+        Transform::from_xyz(-100.0, 0.0, 0.0),
         &mut commands,
         &mut asset_server,
         &mut materials,
+        &mut color,
     );
 
     // light

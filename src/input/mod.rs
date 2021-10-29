@@ -1,6 +1,8 @@
 use crate::SystemLabels;
 use bevy::input::mouse::{MouseMotion, MouseWheel};
 use bevy::prelude::*;
+use bevy::render::camera::Camera;
+use bevy_rapier3d::rapier::parry::query::PersistentQueryDispatcher;
 use std::fmt;
 //use keymap::AnyKey;
 use num_derive::{FromPrimitive, ToPrimitive};
@@ -20,6 +22,7 @@ impl Plugin for InputPlugin {
         app
             //.add_startup_system(input_setup.system())
             .add_system(input_handling.system().label(SystemLabels::Input))
+            .add_system(mouseray_system.system())
             .add_system(debug_input.system().after(SystemLabels::Input))
             .add_startup_system(setup_debug_input.system())
             .insert_resource(MappedInput::default());
@@ -56,8 +59,42 @@ impl From<KeyCode> for Switch {
     }
 }
 
-//
-fn mouseray() {}
+#[derive(Debug, Default)]
+pub struct MouseRay {
+    ray: Option<bevy_mod_raycast::Ray3d>,
+}
+
+fn mouseray_system(
+    windows: Res<Windows>,
+    mut query: Query<(&Camera, &GlobalTransform, &mut MouseRay)>,
+) {
+    for (camera, camera_transform, mut mouseray) in query.iter_mut() {
+        let window = windows.get(camera.window);
+        let cursor_position = window.and_then(|w| w.cursor_position());
+
+        if let (Some(window), Some(cursor_position)) = (window, cursor_position) {
+            let camera_position = camera_transform.compute_matrix();
+
+            let screen_size = Vec2::from([window.width() as f32, window.height() as f32]);
+            let projection_matrix = camera.projection_matrix;
+
+            // Normalized device coordinate cursor position from (-1, -1, -1) to (1, 1, 1)
+            let cursor_ndc = (cursor_position / screen_size) * 2.0 - Vec2::from([1.0, 1.0]);
+            let cursor_pos_ndc_near: Vec3 = cursor_ndc.extend(-1.0);
+            let cursor_pos_ndc_far: Vec3 = cursor_ndc.extend(1.0);
+
+            // Use near and far ndc points to generate a ray in world space
+            // This method is more robust than using the location of the camera as the start of
+            // the ray, because ortho cameras have a focal point at infinity!
+            let ndc_to_world: Mat4 = camera_position * projection_matrix.inverse();
+            let cursor_pos_near: Vec3 = ndc_to_world.project_point3(cursor_pos_ndc_near);
+            let cursor_pos_far: Vec3 = ndc_to_world.project_point3(cursor_pos_ndc_far);
+            let ray_direction = cursor_pos_far - cursor_pos_near;
+            mouseray.ray = Some(bevy_mod_raycast::Ray3d::new(cursor_pos_near, ray_direction));
+            debug!("{:?}", mouseray);
+        }
+    }
+}
 
 fn input_handling(
     mut inputs: ResMut<MappedInput>,
@@ -96,6 +133,10 @@ fn input_handling(
     for scroll in mouse_scroll.iter() {
         inputs.scroll_mouse(scroll.y);
     }
+
+    //for window in windows.iter() {
+    //    inputs.set_cursor_position(window.id(), window.cursor_position())
+    //}
 }
 
 #[derive(Hash, PartialEq, Eq, Debug, ToPrimitive, FromPrimitive, Clone, Copy)]

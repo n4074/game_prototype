@@ -87,6 +87,7 @@ pub struct MappedInput {
     just_deactivated: HashSet<ActionId>,
     mouse_motion: Vec2,
     mouse_scroll: f32,
+    cursor_positions: HashMap<bevy::window::WindowId, Option<Vec2>>,
 }
 
 impl MappedInput {

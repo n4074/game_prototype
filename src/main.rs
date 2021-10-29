@@ -136,6 +136,7 @@ fn setup(
             ..Default::default()
         })
         .insert(camera::CameraController::default())
+        .insert(input::MouseRay::default())
         .insert_bundle(PickingCameraBundle::default())
         .insert_bundle(bevy_rapier3d::prelude::RigidBodyBundle::default());
 

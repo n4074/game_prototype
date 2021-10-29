@@ -55,10 +55,17 @@ fn drag_selection(
     query_pipeline: Res<QueryPipeline>,
     collider_query: QueryPipelineColliderComponentsQuery,
     mut drag: Local<DragCoords>,
-    q: Query<(&Camera, &GlobalTransform, &PerspectiveProjection)>,
+    q: Query<(
+        &Camera,
+        &GlobalTransform,
+        &PerspectiveProjection,
+        &crate::input::MouseRay,
+    )>,
     mut deselect: Query<(Entity, With<crate::ship::Selected>)>,
 ) {
     let cursor_position = windows.get_primary().and_then(|w| w.cursor_position());
+
+    let (camera, camera_transform, projection, mouseray) = q.single().unwrap();
 
     if input_mouse.just_pressed(MouseButton::Left) {
         drag.start = cursor_position;
@@ -83,7 +90,7 @@ fn drag_selection(
                 commands.entity(entity).remove::<crate::ship::Selected>();
             }
 
-            let (camera, camera_transform, projection) = q.single().unwrap();
+            //let (camera, camera_transform, projection, mouseray) = q.single().unwrap();
 
             let max = Vec2::max(start, end);
             let min = Vec2::min(start, end);

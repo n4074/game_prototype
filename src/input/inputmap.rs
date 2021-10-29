@@ -1,11 +1,47 @@
 //! This module provides an graph based input mapping data structure.
 //!
-//! Mapped inputs are represented as
+//! Mapped inputs are represented as follows:
+//! A switch is a single kind of user input, such as a keypress, mouse click, or more abstractly
+//! some motion of the mouse.
+//!
+//! Every binding maps some combination of switches to an action. For example, below we bind the switch
+//! KeyCode::A to the action MyActions::Left.
+//!
+//! ```
+//! let inputs = MappedInput::default();
+//! inputs.bind([KeyCode::A], MyActions::Left);
+//! ```
+//!
+//! This is represented in the graph by adding the KeyCode::A node if it doesn't already exist, and then adding
+//! an edge from this node to the Root (empty) node.
+//!
+//! Likewise, below we add a second binding which binds the key combination LAlt + A to the DodgeLeft action.
+//!
+//! ```
+//!  inputs.bind( [KeyCode::LAlt, KeyCode::A], MyActions::DodgeLeft);
+//! ```
+//!
+//! This is represented in the graph by creating a node for KeyCode::LAlt.
+//! There already exists a node for KeyCode::A so a new node is not created.
+//! We add an edge from KeyCode::A to KeyCode::LAlt with the DodgeLeft action.
+//!
+//! Finally, we add a binding for the combination LAlt + LCtrl + A to DodgeLefter
+//!
+//! ```
+//!  inputs.bind( [KeyCode::LAlt, KeyCode::LCtrl, KeyCode::A], MyActions::DodgeLefter);
+//! ```
+//!
+//! This adds two new nodes to the graph: the LCtrl node and a compound LCtrl + LAlt node.
+//! Layer edges are added from the LAlt and LCtrl nodes to the LCtrl + LAlt node. An Action edge is created
+//! from the A node to the LCtrl + LAlt node, with the DodgeLefter action.
+//!
+//! # TODO
+//! Finish documentation
 use super::Switch;
 use bevy::prelude::Vec2;
 use num_traits::ToPrimitive;
 use petgraph::{
-    graph::{DiGraph, NodeIndex},
+    graph::{DiGraph, EdgeIndex, NodeIndex},
     Direction,
 };
 use std::{
@@ -24,7 +60,7 @@ enum Edge {
 
 #[derive(Debug, Clone)]
 struct Node {
-    label: String,
+    //label: String,
     active: u8,
     threshold: u8,
 }
@@ -41,7 +77,9 @@ impl<T: 'static + ToPrimitive + Send + Sync + std::fmt::Debug> Action for T {}
 
 #[derive(Debug, Default)]
 pub struct MappedInput {
-    boxed_types: HashMap<ActionId, Box<dyn Action>>,
+    //boxed_types: HashMap<ActionId, Box<dyn Action>>,
+    edge_labels: HashMap<EdgeIndex, String>,
+    node_labels: HashMap<NodeIndex, String>,
     bindings: DiGraph<Node, Edge>,
     nodes: HashMap<Vec<Switch>, NodeIndex>,
     active: HashSet<ActionId>,
@@ -59,8 +97,6 @@ impl MappedInput {
         S: Into<Switch>,
         I: IntoIterator<Item = S>,
     {
-        self.boxed_types.insert(action.to_id(), Box::new(action));
-
         let keys = keys.into_iter().map(|i| i.into()).collect::<Vec<Switch>>();
 
         let (&terminator, layer) = keys.split_last().expect("Received empty binding");
@@ -68,19 +104,30 @@ impl MappedInput {
         let terminator_node = self.get_or_create_node(&[terminator.into()]);
 
         let layer_node = self.get_or_create_node(&layer);
-
-        // edge from switch to layer, with action
-        self.bindings
-            .update_edge(terminator_node, layer_node, Edge::Action(action.to_id()));
+        self.add_edge(terminator_node, layer_node, Some(&action));
 
         if layer.len() > 1 {
             for &switch in layer {
                 let switch_node = self.get_or_create_node(&[switch]);
-
-                self.bindings
-                    .update_edge(switch_node, layer_node, Edge::Layer);
+                self.add_edge(switch_node, layer_node, None);
             }
         }
+    }
+
+    /// Add an edge _edge_ from a to b, and update edge labels
+    fn add_edge(&mut self, a: NodeIndex, b: NodeIndex, action: Option<&dyn Action>) {
+        let edge = match &action {
+            Some(action) => Edge::Action(action.to_id()),
+            None => Edge::Layer,
+        };
+        let edge_idx = self.bindings.update_edge(a, b, edge);
+
+        let label = match &action {
+            Some(action) => format!("{:?}", action),
+            None => "Layer".to_string(),
+        };
+
+        self.edge_labels.insert(edge_idx, label);
     }
 
     fn get_or_create_node(&mut self, keys: &[Switch]) -> NodeIndex {
@@ -89,14 +136,23 @@ impl MappedInput {
         }
 
         let index = self.bindings.add_node(Node {
-            label: format!("{:?}", keys),
             active: 0,
             threshold: keys.len() as u8,
         });
 
         self.nodes.insert(keys.to_owned(), index);
 
+        self.node_labels.insert(index, Self::node_label(keys));
+
         index
+    }
+
+    fn node_label(keys: &[Switch]) -> String {
+        if keys == &[] {
+            return "Root".to_string();
+        }
+        let labels: Vec<String> = keys.into_iter().map(|s| format!("{}", s)).collect();
+        labels.join(" + ")
     }
 
     pub(crate) fn update(&mut self) {
@@ -128,18 +184,12 @@ impl MappedInput {
                 match (self.bindings[edge], &mut self.bindings[node]) {
                     (Edge::Layer, Node { active, .. }) => {
                         *active -= 1;
-                        debug!(
-                            "Decrementing node {:?}:",
-                            to_debug_node(&self.bindings[node], self)
-                        );
+                        debug!("Decrementing node {:?}:", self.node_labels[&node]);
                     }
                     (Edge::Action(action), _) => {
                         if self.active.remove(&action) {
                             self.just_deactivated.insert(action);
-                            debug!(
-                                "Deactivating {}",
-                                to_debug_edge(&Edge::Action(action), self)
-                            );
+                            debug!("Deactivating {}", self.edge_labels[&edge]);
                         }
                     }
                 }
@@ -159,7 +209,7 @@ impl MappedInput {
 
             node.active += 1;
 
-            debug!("Pressing: {:?}", node);
+            debug!("Pressing: {} {:?}", self.node_labels[&index], node);
 
             let mut neighbours = self
                 .bindings
@@ -174,8 +224,8 @@ impl MappedInput {
                     (Edge::Layer, Node { active, .. }) => {
                         *active += 1;
                         debug!(
-                            "Incrementing node {:?}:",
-                            to_debug_node(&self.bindings[node], self)
+                            "Incrementing node {}:",
+                            self.node_labels[&node] //to_debug_node(&self.bindings[node], self)
                         );
                     }
                     (
@@ -191,24 +241,25 @@ impl MappedInput {
                             threshold, active, highest_threshold
                         );
                         // # TODO: Eventually we want our edges to be presorted
-                        // so we can break here;
+                        // in order of threshold, so that the highest threshold
+                        // comes first, and then we can just break on the first result
                         //if self.active.insert(action) {
                         //    self.just_activated.insert(action);
                         //    break;
                         //}
 
                         if (*threshold as i32) > highest_threshold {
-                            target_action = Some(action);
+                            target_action = Some((action, edge));
                             highest_threshold = *threshold as i32;
                         }
                     }
                     _ => {}
                 }
             }
-            if let Some(action) = target_action {
+            if let Some((action, edge)) = target_action {
                 debug!(
-                    "Activating: {:?}",
-                    to_debug_edge(&Edge::Action(action), &self)
+                    "Activating: {}",
+                    self.edge_labels[&edge] //to_debug_edge(&Edge::Action(action), &self)
                 );
                 if self.active.insert(action) {
                     self.just_activated.insert(action);
@@ -264,50 +315,12 @@ impl MappedInput {
         self.deactivate(key);
     }
 
-    pub(crate) fn get_active(&self) -> Vec<&Box<dyn Action>> {
-        self.active
-            .iter()
-            .filter_map(|key| self.boxed_types.get(key))
-            .collect()
-    }
-
-    pub(crate) fn get_just_activated(&self) -> Vec<&Box<dyn Action>> {
-        self.just_activated
-            .iter()
-            .filter_map(|key| self.boxed_types.get(key))
-            .collect()
-    }
-
-    pub(crate) fn get_just_deactivated(&self) -> Vec<&Box<dyn Action>> {
-        self.just_deactivated
-            .iter()
-            .filter_map(|key| self.boxed_types.get(key))
-            .collect()
-    }
-
     pub(crate) fn bindings_graphviz(&self) -> String {
-        let debug_graph = self.bindings.map(
-            |_, n| format!("{:?}", n),
-            |_, e| match e {
-                Edge::Action(a) => format!("{:?}", self.boxed_types.get(&a).unwrap()),
-                a => format!("{:?}", a),
-            },
-        );
+        let debug_graph = self
+            .bindings
+            .map(|n, _| &self.node_labels[&n], |e, _| &self.edge_labels[&e]);
 
-        format!("{:?}", petgraph::dot::Dot::new(&debug_graph))
-    }
-}
-
-fn to_debug_edge(edge: &Edge, input: &MappedInput) -> String {
-    match *edge {
-        Edge::Action(a) => format!("{:?}", input.boxed_types.get(&a).unwrap()),
-        a => format!("{:?}", a),
-    }
-}
-
-fn to_debug_node(node: &Node, _input: &MappedInput) -> String {
-    match node {
-        a => format!("{:?}", a),
+        format!("{}", petgraph::dot::Dot::new(&debug_graph))
     }
 }
 

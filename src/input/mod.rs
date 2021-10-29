@@ -1,6 +1,7 @@
 use crate::SystemLabels;
 use bevy::input::mouse::{MouseMotion, MouseWheel};
 use bevy::prelude::*;
+use std::fmt;
 //use keymap::AnyKey;
 use num_derive::{FromPrimitive, ToPrimitive};
 //use num_traits::ToPrimitive;
@@ -33,6 +34,16 @@ pub enum Switch {
     MouseScroll,
 }
 
+impl fmt::Display for Switch {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match &self {
+            Switch::Key(k) => write!(f, "{:?}", k),
+            Switch::Mouse(k) => write!(f, "Mouse{:?}", k),
+            s => write!(f, "{:?}", s), //Switch::Mouse(b) => write!(f, "{:?}", b),
+        }
+    }
+}
+
 impl From<MouseButton> for Switch {
     fn from(button: MouseButton) -> Self {
         Switch::Mouse(button)
@@ -44,6 +55,9 @@ impl From<KeyCode> for Switch {
         Switch::Key(button)
     }
 }
+
+//
+fn mouseray() {}
 
 fn input_handling(
     mut inputs: ResMut<MappedInput>,

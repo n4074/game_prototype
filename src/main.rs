@@ -41,7 +41,7 @@ fn main() {
     log::debug!("Launching...");
 
     App::build()
-        .insert_resource(Msaa { samples: 8 })
+        .insert_resource(Msaa { samples: 4 })
         .add_plugins(DefaultPlugins)
         //.add_plugin(GamePlugins)
         .add_plugin(StartupPlugin)

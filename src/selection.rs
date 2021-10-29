@@ -69,6 +69,7 @@ fn drag_selection(
 
     if input_mouse.just_pressed(MouseButton::Left) {
         drag.start = cursor_position;
+        debug!("{:?}", mouseray);
     }
 
     if input_mouse.pressed(MouseButton::Left) {

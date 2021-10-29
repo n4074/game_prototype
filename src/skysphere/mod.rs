@@ -47,10 +47,16 @@ pub fn setup(
 
     let texture = asset_server.load("textures/skysphere/skysphere1.mantra1.png");
 
-    let mut descriptor = PipelineDescriptor::default_config(ShaderStages {
-        vertex: asset_server.load::<Shader, _>("shaders/skysphere/skysphere.vert"),
-        fragment: Some(asset_server.load::<Shader, _>("shaders/skysphere/skysphere.frag")),
-    });
+    let shaders = ShaderStages {
+        vertex: asset_server.load::<Shader, _>("shaders/skysphere/skysphere.vert.spv"),
+        fragment: Some(asset_server.load::<Shader, _>("shaders/skysphere/skysphere.frag.spv")),
+    };
+
+    // Silly hack due to https://github.com/bevyengine/bevy/issues/1359
+    // which results in panics randomly when a pipeline is created before the shader assets are loaded
+    std::thread::sleep(std::time::Duration::from_millis(200));
+
+    let mut descriptor = PipelineDescriptor::default_config(shaders);
 
     if let Some(stencil) = &mut descriptor.depth_stencil {
         stencil.depth_write_enabled = false;

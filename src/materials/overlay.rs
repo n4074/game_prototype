@@ -121,6 +121,20 @@ pub fn add_overlay_graph(
     asset_server: &Res<AssetServer>,
     pipelines: &mut Assets<PipelineDescriptor>,
 ) {
+    let healthbar_shaders = ShaderStages {
+        vertex: asset_server.load::<Shader, _>("shaders/overlay/healthbar.vert.spv"),
+        fragment: Some(asset_server.load::<Shader, _>("shaders/overlay/healthbar.frag.spv")),
+    };
+
+    let icon_shaders = ShaderStages {
+        vertex: asset_server.load::<Shader, _>("shaders/overlay/icon.vert.spv"),
+        fragment: Some(asset_server.load::<Shader, _>("shaders/overlay/icon.frag.spv")),
+    };
+
+    // Silly hack due to https://github.com/bevyengine/bevy/issues/1359
+    // which results in panics randomly when a pipeline is created before the shader assets are loaded
+    std::thread::sleep(std::time::Duration::from_millis(200));
+
     render_graph.add_system_node(OVERLAY, AssetRenderResourcesNode::<Overlay>::new(true));
 
     render_graph
@@ -129,17 +143,11 @@ pub fn add_overlay_graph(
 
     pipelines.set_untracked(
         HEALTHBAR_PIPELINE_HANDLE,
-        PipelineDescriptor::default_config(ShaderStages {
-            vertex: asset_server.load::<Shader, _>("shaders/overlay/healthbar.vert"),
-            fragment: Some(asset_server.load::<Shader, _>("shaders/overlay/healthbar.frag")),
-        }),
+        PipelineDescriptor::default_config(healthbar_shaders),
     );
 
     pipelines.set_untracked(
         ICON_PIPELINE_HANDLE,
-        PipelineDescriptor::default_config(ShaderStages {
-            vertex: asset_server.load::<Shader, _>("shaders/overlay/icon.vert"),
-            fragment: Some(asset_server.load::<Shader, _>("shaders/overlay/icon.frag")),
-        }),
+        PipelineDescriptor::default_config(icon_shaders),
     );
 }

@@ -224,10 +224,7 @@ impl MappedInput {
                 match (self.bindings[edge], &mut self.bindings[node]) {
                     (Edge::Layer, Node { active, .. }) => {
                         *active += 1;
-                        debug!(
-                            "Incrementing node {}:",
-                            self.node_labels[&node] //to_debug_node(&self.bindings[node], self)
-                        );
+                        debug!("Incrementing node {}:", self.node_labels[&node]);
                     }
                     (
                         Edge::Action(action),

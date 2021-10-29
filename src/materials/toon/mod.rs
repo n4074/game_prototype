@@ -37,8 +37,8 @@ pub const TOON_PIPELINE_HANDLE: HandleUntyped = HandleUntyped::weak_from_u64(
     const_random::const_random!(u64),
 );
 
-const TOON_VERTEX_SHADER_PATH: &str = "shaders/toon/toon.vert";
-const TOON_FRAGMENT_SHADER_PATH: &str = "shaders/toon/toon.frag";
+const TOON_VERTEX_SHADER_PATH: &str = "shaders/toon/toon.vert.spv";
+const TOON_FRAGMENT_SHADER_PATH: &str = "shaders/toon/toon.frag.spv";
 
 pub fn setup(
     mut render_graph: ResMut<RenderGraph>,
@@ -50,6 +50,10 @@ pub fn setup(
 
     let vert_shader = asset_server.load::<Shader, _>(TOON_VERTEX_SHADER_PATH);
     let frag_shader = asset_server.load::<Shader, _>(TOON_FRAGMENT_SHADER_PATH);
+
+    // Silly hack due to https://github.com/bevyengine/bevy/issues/1359
+    // which results in panics randomly when a pipeline is created before the shader assets are loaded
+    std::thread::sleep(std::time::Duration::from_millis(200));
 
     render_graph.add_system_node(TOON_NODE, AssetRenderResourcesNode::<Toon>::new(true));
 

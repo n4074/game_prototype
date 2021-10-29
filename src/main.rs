@@ -55,7 +55,7 @@ fn main() {
         .add_plugin(SelectionPlugin)
         .add_plugin(InputPlugin)
         .add_plugin(SkySpherePlugin)
-        .add_plugin(debug::DebugPlugin)
+        //.add_plugin(debug::DebugPlugin)
         .add_plugin(ToonPlugin)
         //.insert_resource(ClearColor(Color::BLACK))
         .run();
@@ -101,7 +101,7 @@ fn setup(
         }
     }
 
-    //let transform = Transform::from_xyz(5.0, -0.5, -0.5);
+    let transform = Transform::from_xyz(5.0, -0.5, -0.5);
 
     spawn_ship(
         Transform::from_xyz(5.0, -0.5, -0.5),

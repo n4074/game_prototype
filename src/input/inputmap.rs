@@ -1,3 +1,6 @@
+//! This module provides an graph based input mapping data structure.
+//!
+//! Mapped inputs are represented as
 use super::Switch;
 use bevy::prelude::Vec2;
 use num_traits::ToPrimitive;
@@ -8,6 +11,7 @@ use petgraph::{
 use std::{
     any::TypeId,
     collections::{HashMap, HashSet},
+    fmt::Debug,
 };
 
 use log::debug;
@@ -280,6 +284,18 @@ impl MappedInput {
             .filter_map(|key| self.boxed_types.get(key))
             .collect()
     }
+
+    pub(crate) fn bindings_graphviz(&self) -> String {
+        let debug_graph = self.bindings.map(
+            |_, n| format!("{:?}", n),
+            |_, e| match e {
+                Edge::Action(a) => format!("{:?}", self.boxed_types.get(&a).unwrap()),
+                a => format!("{:?}", a),
+            },
+        );
+
+        format!("{:?}", petgraph::dot::Dot::new(&debug_graph))
+    }
 }
 
 fn to_debug_edge(edge: &Edge, input: &MappedInput) -> String {
@@ -296,20 +312,7 @@ fn to_debug_node(node: &Node, _input: &MappedInput) -> String {
 }
 
 pub(crate) fn debug_binding_graph(input: &MappedInput) {
-    //debug!("Pressed: {:?}", input.get_active());
-    //debug!("Just Pressed: {:?}", input.get_just_activated());
-    //debug!("Just Released: {:?}", input.get_just_deactivated());
-    //debug!("Layer: {:?}", input.layer_depth);
-    //debug!("Bindings: {:?}", input.nodes);
-
-    let graph = input.bindings.clone();
-    let debug_graph = graph.map(
-        |_, n| to_debug_node(n, input),
-        |_, e| to_debug_edge(e, input),
-    );
-    let dot = petgraph::dot::Dot::new(&debug_graph);
-
     let mut file = std::fs::File::create("bindings.dot").expect("Failed to create file");
-    std::io::Write::write_all(&mut file, format!("{:?}", dot).as_bytes())
+    std::io::Write::write_all(&mut file, input.bindings_graphviz().as_bytes())
         .expect("Failed to write dot");
 }

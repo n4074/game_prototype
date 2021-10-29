@@ -1,3 +1,5 @@
+//! # Selection
+//! The selection module handles both click and drag selection events
 use bevy::{
     input::mouse::MouseButton,
     math::*,
@@ -25,7 +27,7 @@ impl Plugin for SelectionPlugin {
     fn build(&self, app: &mut AppBuilder) {
         app.add_system(selection.system())
             .add_system(drag_selection.system())
-            .add_system(debug_draw_frustum.system())
+            //.add_system(debug_draw_frustum.system())
             .insert_resource(DragCoords::default())
             .insert_resource(Option::<ConvexPolyhedron>::default());
     }
@@ -45,6 +47,7 @@ fn selection(mut commands: Commands, mut events: EventReader<PickingEvent>) {
     }
 }
 
+/// System handles dra
 fn drag_selection(
     mut commands: Commands,
     windows: Res<Windows>,
@@ -176,6 +179,7 @@ const FRUSTUM_WIREFRAME_INDICES: &[(usize, usize)] = &[
     (7, 1),
 ];
 
+// Draws debug lines to show the selection frustum
 fn debug_draw_frustum(
     mut frustum: ResMut<Option<ConvexPolyhedron>>,
     mut lines: ResMut<bevy_prototype_debug_lines::DebugLines>,

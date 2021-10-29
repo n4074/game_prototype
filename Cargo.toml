@@ -12,10 +12,10 @@ members = ["crates/draw_textures", "crates/edgedetection"]
 bevy = { version = "0.5", features = ["dynamic"] }
 bevy_rapier3d = "*"
 bevy_mod_picking = { version = "0.4" }
-bevy_mod_raycast = { version = "*" }
-bevy_mod_debugdump = "*"
-bevy_prototype_debug_lines = "0.3.2"
-bevy_prototype_lyon = "*"
+bevy_mod_raycast = { version = "0.2" }
+#bevy_mod_debugdump = "*"
+bevy_prototype_debug_lines = "0.3"
+#bevy_prototype_lyon = "*"
 bevy-inspector-egui = "*"
 const-random = "0.1.13"
 num-derive = "0.3.3"

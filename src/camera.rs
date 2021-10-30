@@ -8,8 +8,8 @@ pub struct CameraControlPlugin;
 
 pub struct CameraController {
     _sensitivity: f32,
-    radius: f32,
-    focus: Vec3,
+    pub radius: f32,
+    pub focus: Vec3,
     upside_down: bool,
 }
 

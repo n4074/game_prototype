@@ -93,7 +93,7 @@ pub struct MappedInput {
 impl MappedInput {
     /// Bind an action to a key binding
 
-    pub fn bind<I, S>(&mut self, keys: I, action: impl Action + Copy)
+    pub fn bind<I, S>(&mut self, keys: I, action: impl Action)
     where
         S: Into<Switch>,
         I: IntoIterator<Item = S>,
@@ -210,7 +210,7 @@ impl MappedInput {
 
             node.active += 1;
 
-            debug!("Pressing: {} {:?}", self.node_labels[&index], node);
+            log::debug!("Pressing: {} {:?}", self.node_labels[&index], node);
 
             let mut neighbours = self
                 .bindings

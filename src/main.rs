@@ -52,10 +52,11 @@ fn main() {
         .add_plugin(PhysicsPlugin)
         .add_plugin(PlayerControllerPlugin)
         .add_plugin(OverlayPlugin)
+        .add_plugin(crate::orders::OrdersPlugin)
         .add_plugin(SelectionPlugin)
         .add_plugin(InputPlugin)
         .add_plugin(SkySpherePlugin)
-        //.add_plugin(debug::DebugPlugin)
+        .add_plugin(debug::DebugPlugin)
         .add_plugin(ToonPlugin)
         //.insert_resource(ClearColor(Color::BLACK))
         .run();
@@ -136,7 +137,7 @@ fn setup(
             ..Default::default()
         })
         .insert(camera::CameraController::default())
-        .insert(input::MouseRay::default())
+        .insert(Option::<crate::input::MouseRay>::default())
         .insert_bundle(PickingCameraBundle::default())
         .insert_bundle(bevy_rapier3d::prelude::RigidBodyBundle::default());
 

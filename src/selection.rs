@@ -22,13 +22,18 @@ pub struct DragCoords {
     start: Option<Vec2>,
     end: Option<Vec2>,
 }
-
+#[derive(Default, Debug, Copy, Clone)]
+pub struct DragRays {
+    start: Option<crate::input::MouseRay>,
+    end: Option<crate::input::MouseRay>,
+}
 impl Plugin for SelectionPlugin {
     fn build(&self, app: &mut AppBuilder) {
         app.add_system(selection.system())
             .add_system(drag_selection.system())
-            //.add_system(debug_draw_frustum.system())
+            .add_system(debug_draw_frustum.system())
             .insert_resource(DragCoords::default())
+            .insert_resource(DragRays::default())
             .insert_resource(Option::<ConvexPolyhedron>::default());
     }
 }
@@ -55,25 +60,27 @@ fn drag_selection(
     query_pipeline: Res<QueryPipeline>,
     collider_query: QueryPipelineColliderComponentsQuery,
     mut drag: Local<DragCoords>,
+    mut dragrays: Local<DragRays>,
     q: Query<(
         &Camera,
         &GlobalTransform,
         &PerspectiveProjection,
-        &crate::input::MouseRay,
+        &Option<crate::input::MouseRay>,
     )>,
     mut deselect: Query<(Entity, With<crate::ship::Selected>)>,
 ) {
     let cursor_position = windows.get_primary().and_then(|w| w.cursor_position());
 
-    let (camera, camera_transform, projection, mouseray) = q.single().unwrap();
+    let (camera, camera_transform, projection, &mouseray) = q.single().unwrap();
 
     if input_mouse.just_pressed(MouseButton::Left) {
         drag.start = cursor_position;
-        debug!("{:?}", mouseray);
+        dragrays.start = mouseray;
     }
 
     if input_mouse.pressed(MouseButton::Left) {
         drag.end = cursor_position;
+        dragrays.end = mouseray;
     }
 
     if input_mouse.just_released(MouseButton::Left) {

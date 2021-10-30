@@ -59,14 +59,16 @@ impl From<KeyCode> for Switch {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Copy, Clone)]
 pub struct MouseRay {
-    ray: Option<bevy_mod_raycast::Ray3d>,
+    pub near: Vec3,
+    pub far: Vec3,
+    pub direction: Vec3,
 }
 
 fn mouseray_system(
     windows: Res<Windows>,
-    mut query: Query<(&Camera, &GlobalTransform, &mut MouseRay)>,
+    mut query: Query<(&Camera, &GlobalTransform, &mut Option<MouseRay>)>,
 ) {
     for (camera, camera_transform, mut mouseray) in query.iter_mut() {
         let window = windows.get(camera.window);
@@ -87,11 +89,15 @@ fn mouseray_system(
             // This method is more robust than using the location of the camera as the start of
             // the ray, because ortho cameras have a focal point at infinity!
             let ndc_to_world: Mat4 = camera_position * projection_matrix.inverse();
-            let cursor_pos_near: Vec3 = ndc_to_world.project_point3(cursor_pos_ndc_near);
-            let cursor_pos_far: Vec3 = ndc_to_world.project_point3(cursor_pos_ndc_far);
-            let ray_direction = cursor_pos_far - cursor_pos_near;
-            mouseray.ray = Some(bevy_mod_raycast::Ray3d::new(cursor_pos_near, ray_direction));
-            debug!("{:?}", mouseray);
+            let near: Vec3 = ndc_to_world.project_point3(cursor_pos_ndc_near);
+            let far: Vec3 = ndc_to_world.project_point3(cursor_pos_ndc_far);
+            let direction = far - near;
+
+            let _ = mouseray.insert(MouseRay {
+                near,
+                far,
+                direction,
+            });
         }
     }
 }

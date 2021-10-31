@@ -2,7 +2,6 @@ use crate::SystemLabels;
 use bevy::input::mouse::{MouseMotion, MouseWheel};
 use bevy::prelude::*;
 use bevy::render::camera::Camera;
-use bevy_rapier3d::rapier::parry::query::PersistentQueryDispatcher;
 use std::fmt;
 //use keymap::AnyKey;
 use num_derive::{FromPrimitive, ToPrimitive};

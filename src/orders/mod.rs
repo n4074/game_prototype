@@ -1,21 +1,28 @@
-use bevy::prelude::*;
 use crate::SystemLabels;
+use bevy::prelude::*;
 pub struct OrdersPlugin;
 
 impl Plugin for OrdersPlugin {
     fn build(&self, app: &mut AppBuilder) {
-        app
-            .add_system(movement_system.system().after(SystemLabels::Input))
-        ;
+        app.add_system(movement_system.system().after(SystemLabels::Input))
+            .insert_resource(Option::<WorldCursor>::default());
     }
 }
 
+#[derive(Default)]
+struct WorldCursor {
+    pos: Vec3,
+}
+
 fn movement_system(
-    _commands: Commands,
+    mut cursor: ResMut<Option<WorldCursor>>,
     mut lines: ResMut<bevy_prototype_debug_lines::DebugLines>,
-    input: Res<crate::input::MappedInput>,
-    query: Query<(&crate::camera::CameraController, &Option<crate::input::MouseRay>)>,
+    query: Query<(
+        &crate::player::camera::CameraController,
+        &Option<crate::input::MouseRay>,
+    )>,
 ) {
+    *cursor = None;
     for (cam, ray) in query.iter() {
         if let Some(ray) = ray {
             let d = (-ray.direction).dot(Vec3::Y);
@@ -28,9 +35,12 @@ fn movement_system(
                 continue;
             }
 
-            let int = ray.near + ray.direction * t;
-            lines.line(int - Vec3::X - Vec3::Z, int + Vec3::X + Vec3::Z, 1.0);
-            lines.line(int - Vec3::Z + Vec3::X, int + Vec3::Z - Vec3::X, 1.0);
+            let pos = ray.near + ray.direction * t;
+
+            let _ = cursor.insert(WorldCursor { pos });
+
+            lines.line(pos - Vec3::X - Vec3::Z, pos + Vec3::X + Vec3::Z, 1.0);
+            lines.line(pos - Vec3::Z + Vec3::X, pos + Vec3::Z - Vec3::X, 1.0);
         }
     }
 }

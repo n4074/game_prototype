@@ -1,16 +1,46 @@
 use std::f32::consts::PI;
 
 use bevy::{input::mouse::MouseButton, prelude::*, render::camera::PerspectiveProjection};
+use bevy_inspector_egui::{Inspectable, InspectableRegistry};
 
 use crate::SystemLabels;
 //use log::debug;
 pub struct CameraControlPlugin;
 
+impl Plugin for CameraControlPlugin {
+    fn build(&self, app: &mut AppBuilder) {
+        app.add_startup_system(setup.system()).add_system(
+            camera_movement
+                .system()
+                .label(SystemLabels::Camera)
+                .after(SystemLabels::Input),
+        );
+
+        let mut registry = app
+            .world_mut()
+            .get_resource_or_insert_with(InspectableRegistry::default);
+
+        // registering custom component to be able to edit it in inspector
+        registry.register::<CameraController>();
+    }
+}
+#[derive(Inspectable)]
 pub struct CameraController {
     _sensitivity: f32,
     pub radius: f32,
     pub focus: Vec3,
     upside_down: bool,
+}
+
+impl Default for CameraController {
+    fn default() -> CameraController {
+        CameraController {
+            focus: Vec3::ZERO,
+            radius: 40f32,
+            _sensitivity: 10f32,
+            upside_down: false,
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, num_derive::ToPrimitive)]
@@ -30,28 +60,6 @@ pub enum Controls {
     Zoom,
 }
 
-impl Default for CameraController {
-    fn default() -> CameraController {
-        CameraController {
-            focus: Vec3::ZERO,
-            radius: 10f32,
-            _sensitivity: 10f32,
-            upside_down: false,
-        }
-    }
-}
-
-impl Plugin for CameraControlPlugin {
-    fn build(&self, app: &mut AppBuilder) {
-        app.add_startup_system(setup.system()).add_system(
-            camera_movement
-                .system()
-                .label(SystemLabels::Camera)
-                .after(SystemLabels::Input),
-        );
-    }
-}
-
 // Tags an entity as capable of panning and orbiting.
 fn get_primary_window_size(windows: &Res<Windows>) -> Vec2 {
     let window = windows.get_primary().unwrap();
@@ -59,7 +67,19 @@ fn get_primary_window_size(windows: &Res<Windows>) -> Vec2 {
     window
 }
 
-fn setup(mut inputmap: ResMut<crate::input::MappedInput>) {
+
+
+fn setup(mut commands: Commands, mut inputmap: ResMut<crate::input::MappedInput>) {
+    // spawn player camera
+    commands
+        .spawn_bundle(PerspectiveCameraBundle {
+            transform: Transform::from_xyz(0.0, 2.5, 10.0).looking_at(Vec3::ZERO, Vec3::Y),
+            ..Default::default()
+        })
+        .insert(CameraController::default())
+        .insert(Option::<crate::input::MouseRay>::default())
+    ;
+
     inputmap.bind([KeyCode::A], Pan::Left);
     inputmap.bind([KeyCode::D], Pan::Right);
     inputmap.bind([KeyCode::W], Pan::Forward);
@@ -189,7 +209,7 @@ fn camera_movement(
             any = true;
             pan_orbit.radius -= scroll * pan_orbit.radius * 0.02;
             // dont allow zoom to reach zero or you get stuck
-            pan_orbit.radius = f32::max(pan_orbit.radius, 0.05);
+            pan_orbit.radius = f32::clamp(pan_orbit.radius, 10.00, 500.00);
         } else if translation.length_squared() > 0.0 {
             any = true;
 

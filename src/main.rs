@@ -2,13 +2,14 @@
 //#![feature(const_generics)]
 #![deny(unused_must_use)]
 #![warn(unused_imports)]
-mod camera;
+//mod camera;
 mod debug;
 mod input;
 mod materials;
 mod movement;
 mod physics;
-mod selection;
+//mod selection;
+mod player;
 mod ship;
 mod skysphere;
 
@@ -17,7 +18,6 @@ mod orders;
 use bevy::prelude::*;
 
 use bevy_mod_picking::*;
-use camera::CameraControlPlugin;
 use input::InputPlugin;
 use materials::{
     overlay::{Overlay, OverlayPlugin},
@@ -25,7 +25,6 @@ use materials::{
 };
 use movement::PlayerControllerPlugin;
 use physics::PhysicsPlugin;
-use selection::SelectionPlugin;
 use ship::{spawn_ship, spawn_station};
 use skysphere::SkySpherePlugin;
 
@@ -45,7 +44,7 @@ fn main() {
         .add_plugins(DefaultPlugins)
         //.add_plugin(GamePlugins)
         .add_plugin(StartupPlugin)
-        .add_plugin(CameraControlPlugin)
+        //.add_plugin(CameraControlPlugin)
         .add_plugin(PickingPlugin)
         .add_plugin(InteractablePickingPlugin)
         .add_plugin(HighlightablePickingPlugin)
@@ -53,11 +52,12 @@ fn main() {
         .add_plugin(PlayerControllerPlugin)
         .add_plugin(OverlayPlugin)
         .add_plugin(crate::orders::OrdersPlugin)
-        .add_plugin(SelectionPlugin)
+        //.add_plugin(SelectionPlugin)
         .add_plugin(InputPlugin)
         .add_plugin(SkySpherePlugin)
         .add_plugin(debug::DebugPlugin)
         .add_plugin(ToonPlugin)
+        .add_plugins(player::PlayerPluginGroup)
         //.insert_resource(ClearColor(Color::BLACK))
         .run();
 }
@@ -102,7 +102,7 @@ fn setup(
         }
     }
 
-    let transform = Transform::from_xyz(5.0, -0.5, -0.5);
+    let _transform = Transform::from_xyz(5.0, -0.5, -0.5);
 
     spawn_ship(
         Transform::from_xyz(5.0, -0.5, -0.5),
@@ -131,15 +131,7 @@ fn setup(
     });
 
     // camera
-    commands
-        .spawn_bundle(PerspectiveCameraBundle {
-            transform: Transform::from_xyz(0.0, 2.5, 10.0).looking_at(Vec3::ZERO, Vec3::Y),
-            ..Default::default()
-        })
-        .insert(camera::CameraController::default())
-        .insert(Option::<crate::input::MouseRay>::default())
-        .insert_bundle(PickingCameraBundle::default())
-        .insert_bundle(bevy_rapier3d::prelude::RigidBodyBundle::default());
+    
 
     let cube_handle = asset_server.load("models/houdini/cube.gltf#Mesh0/Primitive0");
 

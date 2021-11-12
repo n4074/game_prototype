@@ -4,3 +4,6 @@ target
 workspace.code-workspace
 .direnv
 **/venv
+*.spv
+*.pdf
+*.dot

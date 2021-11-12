@@ -209,7 +209,7 @@ impl MappedInput {
 
             node.active += 1;
 
-            log::debug!("Pressing: {} {:?}", self.node_labels[&index], node);
+            //log::debug!("Pressing: {} {:?}", self.node_labels[&index], node);
 
             let mut neighbours = self
                 .bindings

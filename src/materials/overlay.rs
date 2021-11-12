@@ -50,7 +50,7 @@ fn setup(
 }
 
 pub fn toggle_overlay_global(
-    mut parent_ships: Query<(&Children, Option<&crate::ship::Selected>)>,
+    mut parent_ships: Query<(&Children, Option<&crate::units::Selected>)>,
     mut child_overlay: Query<(&mut Visible, With<Handle<Overlay>>)>,
 ) {
     for (children, selected) in parent_ships.iter_mut() {

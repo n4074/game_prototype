@@ -1,6 +1,9 @@
 use std::f32::consts::PI;
 
-use bevy::{input::mouse::MouseButton, prelude::*, render::camera::PerspectiveProjection};
+use bevy::{
+    input::mouse::MouseButton, prelude::*, render::camera::Camera,
+    render::camera::PerspectiveProjection,
+};
 use bevy_inspector_egui::{Inspectable, InspectableRegistry};
 
 use crate::SystemLabels;
@@ -9,12 +12,14 @@ pub struct CameraControlPlugin;
 
 impl Plugin for CameraControlPlugin {
     fn build(&self, app: &mut AppBuilder) {
-        app.add_startup_system(setup.system()).add_system(
-            camera_movement
-                .system()
-                .label(SystemLabels::Camera)
-                .after(SystemLabels::Input),
-        );
+        app.add_startup_system(setup.system())
+            .add_system(
+                camera_movement
+                    .system()
+                    .label(SystemLabels::Camera)
+                    .after(SystemLabels::Input),
+            )
+            .add_system(mouseray_system.system().after(SystemLabels::Input));
 
         let mut registry = app
             .world_mut()
@@ -67,8 +72,6 @@ fn get_primary_window_size(windows: &Res<Windows>) -> Vec2 {
     window
 }
 
-
-
 fn setup(mut commands: Commands, mut inputmap: ResMut<crate::input::MappedInput>) {
     // spawn player camera
     commands
@@ -77,8 +80,8 @@ fn setup(mut commands: Commands, mut inputmap: ResMut<crate::input::MappedInput>
             ..Default::default()
         })
         .insert(CameraController::default())
-        .insert(Option::<crate::input::MouseRay>::default())
-    ;
+        .insert(Option::<MouseRay>::default())
+        .insert(Option::<ControlCursor>::default());
 
     inputmap.bind([KeyCode::A], Pan::Left);
     inputmap.bind([KeyCode::D], Pan::Right);
@@ -229,6 +232,85 @@ fn camera_movement(
             let rot_matrix = Mat3::from_quat(transform.rotation);
             transform.translation =
                 pan_orbit.focus + rot_matrix.mul_vec3(Vec3::new(0.0, 0.0, pan_orbit.radius));
+        }
+    }
+}
+
+/// A structure which represents the players mouse position
+/// within the game world, both as a ray from the near to
+/// far fields, and as a point representing the intersection of that
+/// ray with the control plane
+#[derive(Default)]
+pub struct ControlCursor {
+    pub pos: Vec3,
+}
+
+#[derive(Debug, Default, Copy, Clone)]
+pub struct MouseRay {
+    pub near: Vec3,
+    pub far: Vec3,
+    pub direction: Vec3,
+}
+
+fn mouseray_system(
+    windows: Res<Windows>,
+    mut query: Query<(
+        &Camera,
+        &GlobalTransform,
+        &CameraController,
+        &mut Option<MouseRay>,
+        &mut Option<ControlCursor>,
+    )>,
+    mut lines: ResMut<bevy_prototype_debug_lines::DebugLines>,
+) {
+    for (camera, camera_transform, controller, mut mouseray, mut cursor) in query.iter_mut() {
+        let window = windows.get(camera.window);
+        let cursor_position = window.and_then(|w| w.cursor_position());
+
+        if let (Some(window), Some(cursor_position)) = (window, cursor_position) {
+            let camera_position = camera_transform.compute_matrix();
+
+            let screen_size = Vec2::from([window.width() as f32, window.height() as f32]);
+            let projection_matrix = camera.projection_matrix;
+
+            // Normalized device coordinate cursor position from (-1, -1, -1) to (1, 1, 1)
+            let cursor_ndc = (cursor_position / screen_size) * 2.0 - Vec2::from([1.0, 1.0]);
+            let cursor_pos_ndc_near: Vec3 = cursor_ndc.extend(-1.0);
+            let cursor_pos_ndc_far: Vec3 = cursor_ndc.extend(1.0);
+
+            // Use near and far ndc points to generate a ray in world space
+            // This method is more robust than using the location of the camera as the start of
+            // the ray, because ortho cameras have a focal point at infinity!
+            let ndc_to_world: Mat4 = camera_position * projection_matrix.inverse();
+            let near: Vec3 = ndc_to_world.project_point3(cursor_pos_ndc_near);
+            let far: Vec3 = ndc_to_world.project_point3(cursor_pos_ndc_far);
+            let direction = far - near;
+
+            let ray = MouseRay {
+                near,
+                far,
+                direction,
+            };
+
+            let _ = mouseray.insert(ray);
+
+            let d = (-ray.direction).dot(Vec3::Y);
+
+            if d == 0f32 {
+                continue;
+            }
+
+            let t = Vec3::Y.dot(ray.near - controller.focus) / d;
+            if t < 0f32 || t > 1f32 {
+                continue;
+            }
+
+            let pos = ray.near + ray.direction * t;
+
+            let _ = cursor.insert(ControlCursor { pos });
+
+            lines.line(pos - Vec3::X - Vec3::Z, pos + Vec3::X + Vec3::Z, 1.0);
+            lines.line(pos - Vec3::Z + Vec3::X, pos + Vec3::Z - Vec3::X, 1.0);
         }
     }
 }

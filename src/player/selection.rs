@@ -15,6 +15,8 @@ use bevy_mod_picking::{
     SelectionEvent::{JustDeselected, JustSelected},
 };
 
+use crate::units;
+
 pub struct SelectionPlugin;
 
 #[derive(Default, Debug, Copy, Clone)]
@@ -24,8 +26,8 @@ pub struct DragCoords {
 }
 #[derive(Default, Debug, Copy, Clone)]
 pub struct DragRays {
-    start: Option<crate::input::MouseRay>,
-    end: Option<crate::input::MouseRay>,
+    start: Option<crate::player::camera::MouseRay>,
+    end: Option<crate::player::camera::MouseRay>,
 }
 impl Plugin for SelectionPlugin {
     fn build(&self, app: &mut AppBuilder) {
@@ -42,10 +44,10 @@ fn selection(mut commands: Commands, mut events: EventReader<PickingEvent>) {
     for event in events.iter() {
         match event {
             Selection(JustSelected(entity)) => {
-                commands.entity(*entity).insert(crate::ship::Selected);
+                commands.entity(*entity).insert(units::Selected);
             }
             Selection(JustDeselected(entity)) => {
-                commands.entity(*entity).remove::<crate::ship::Selected>();
+                commands.entity(*entity).remove::<units::Selected>();
             }
             _ => (),
         }
@@ -65,9 +67,9 @@ fn drag_selection(
         &Camera,
         &GlobalTransform,
         &PerspectiveProjection,
-        &Option<crate::input::MouseRay>,
+        &Option<crate::player::camera::MouseRay>,
     )>,
-    mut deselect: Query<(Entity, With<crate::ship::Selected>)>,
+    mut deselect: Query<(Entity, With<crate::units::Selected>)>,
 ) {
     let cursor_position = windows.get_primary().and_then(|w| w.cursor_position());
 
@@ -95,7 +97,7 @@ fn drag_selection(
             }
 
             for (entity, _) in deselect.iter_mut() {
-                commands.entity(entity).remove::<crate::ship::Selected>();
+                commands.entity(entity).remove::<units::Selected>();
             }
 
             //let (camera, camera_transform, projection, mouseray) = q.single().unwrap();
@@ -143,9 +145,7 @@ fn drag_selection(
                 filter,
                 |handle| {
                     println!("The entity {:?} intersects our shape.", handle.entity());
-                    commands
-                        .entity(handle.entity())
-                        .insert(crate::ship::Selected);
+                    commands.entity(handle.entity()).insert(units::Selected);
                     true
                 },
             );

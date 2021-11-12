@@ -6,14 +6,14 @@
 mod debug;
 mod input;
 mod materials;
-mod movement;
+//mod movement;
 mod physics;
 //mod selection;
 mod player;
-mod ship;
 mod skysphere;
+mod units;
 
-mod orders;
+//mod orders;
 
 use bevy::prelude::*;
 
@@ -23,10 +23,10 @@ use materials::{
     overlay::{Overlay, OverlayPlugin},
     toon::ToonPlugin,
 };
-use movement::PlayerControllerPlugin;
+//use movement::PlayerControllerPlugin;
 use physics::PhysicsPlugin;
-use ship::{spawn_ship, spawn_station};
 use skysphere::SkySpherePlugin;
+use units::ship::{spawn_ship, spawn_station};
 
 #[derive(SystemLabel, Clone, Debug, PartialEq, Eq, Hash)]
 enum SystemLabels {
@@ -42,23 +42,18 @@ fn main() {
     App::build()
         .insert_resource(Msaa { samples: 4 })
         .add_plugins(DefaultPlugins)
-        //.add_plugin(GamePlugins)
         .add_plugin(StartupPlugin)
-        //.add_plugin(CameraControlPlugin)
         .add_plugin(PickingPlugin)
         .add_plugin(InteractablePickingPlugin)
         .add_plugin(HighlightablePickingPlugin)
         .add_plugin(PhysicsPlugin)
-        .add_plugin(PlayerControllerPlugin)
         .add_plugin(OverlayPlugin)
-        .add_plugin(crate::orders::OrdersPlugin)
-        //.add_plugin(SelectionPlugin)
         .add_plugin(InputPlugin)
         .add_plugin(SkySpherePlugin)
         .add_plugin(debug::DebugPlugin)
         .add_plugin(ToonPlugin)
         .add_plugins(player::PlayerPluginGroup)
-        //.insert_resource(ClearColor(Color::BLACK))
+        .add_plugin(units::UnitsPlugin)
         .run();
 }
 
@@ -131,7 +126,6 @@ fn setup(
     });
 
     // camera
-    
 
     let cube_handle = asset_server.load("models/houdini/cube.gltf#Mesh0/Primitive0");
 

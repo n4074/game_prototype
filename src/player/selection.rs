@@ -15,7 +15,7 @@ use bevy_mod_picking::{
     SelectionEvent::{JustDeselected, JustSelected},
 };
 
-use crate::units;
+//use crate::units;
 
 pub struct SelectionPlugin;
 
@@ -30,7 +30,7 @@ pub struct DragRays {
     end: Option<crate::player::camera::MouseRay>,
 }
 impl Plugin for SelectionPlugin {
-    fn build(&self, app: &mut AppBuilder) {
+    fn build(&self, app: &mut App) {
         app.add_system(selection.system())
             .add_system(drag_selection.system())
             .add_system(debug_draw_frustum.system())
@@ -44,10 +44,10 @@ fn selection(mut commands: Commands, mut events: EventReader<PickingEvent>) {
     for event in events.iter() {
         match event {
             Selection(JustSelected(entity)) => {
-                commands.entity(*entity).insert(units::Selected);
+                commands.entity(*entity).insert(super::Selected);
             }
             Selection(JustDeselected(entity)) => {
-                commands.entity(*entity).remove::<units::Selected>();
+                commands.entity(*entity).remove::<super::Selected>();
             }
             _ => (),
         }
@@ -67,22 +67,22 @@ fn drag_selection(
         &Camera,
         &GlobalTransform,
         &PerspectiveProjection,
-        &Option<crate::player::camera::MouseRay>,
+        &crate::player::camera::MouseRayComponent,
     )>,
-    mut deselect: Query<(Entity, With<crate::units::Selected>)>,
+    mut deselect: Query<(Entity, With<super::Selected>)>,
 ) {
     let cursor_position = windows.get_primary().and_then(|w| w.cursor_position());
 
-    let (camera, camera_transform, projection, &mouseray) = q.single().unwrap();
+    let (camera, camera_transform, projection, mouseray) = q.single();
 
     if input_mouse.just_pressed(MouseButton::Left) {
         drag.start = cursor_position;
-        dragrays.start = mouseray;
+        dragrays.start = mouseray.0;
     }
 
     if input_mouse.pressed(MouseButton::Left) {
         drag.end = cursor_position;
-        dragrays.end = mouseray;
+        dragrays.end = mouseray.0;
     }
 
     if input_mouse.just_released(MouseButton::Left) {
@@ -97,7 +97,7 @@ fn drag_selection(
             }
 
             for (entity, _) in deselect.iter_mut() {
-                commands.entity(entity).remove::<units::Selected>();
+                commands.entity(entity).remove::<super::Selected>();
             }
 
             //let (camera, camera_transform, projection, mouseray) = q.single().unwrap();
@@ -145,7 +145,7 @@ fn drag_selection(
                 filter,
                 |handle| {
                     println!("The entity {:?} intersects our shape.", handle.entity());
-                    commands.entity(handle.entity()).insert(units::Selected);
+                    commands.entity(handle.entity()).insert(super::Selected);
                     true
                 },
             );

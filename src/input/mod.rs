@@ -58,7 +58,7 @@ pub(crate) use inputmap::{debug_binding_graph, MappedInput};
 pub struct InputPlugin;
 
 impl Plugin for InputPlugin {
-    fn build(&self, app: &mut AppBuilder) {
+    fn build(&self, app: &mut App) {
         app
             //.add_startup_system(input_setup.system())
             .add_system(input_handling.system().label(SystemLabels::Input))

@@ -4,7 +4,7 @@ pub use bevy_rapier3d::prelude::*;
 pub struct PhysicsPlugin;
 
 impl Plugin for PhysicsPlugin {
-    fn build(&self, app: &mut AppBuilder) {
+    fn build(&self, app: &mut App) {
         app.add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
             .add_startup_system(setup_physics.system())
             .add_plugin(RapierRenderPlugin);
@@ -24,7 +24,11 @@ pub fn setup_physics(mut commands: Commands, mut config: ResMut<RapierConfigurat
     let ground_size = 200.1;
     let ground_height = 0.1;
     let collider = ColliderBundle {
-        shape: ColliderShape::cuboid(ground_size, ground_height, ground_size),
+        shape: ColliderShapeComponent(ColliderShape::cuboid(
+            ground_size,
+            ground_height,
+            ground_size,
+        )),
         position: [0.0, -ground_height - 40.0, 0.0].into(),
         ..ColliderBundle::default()
     };

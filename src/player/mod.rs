@@ -15,6 +15,10 @@ impl PluginGroup for PlayerPluginGroup {
             .add(commands::CommandPlugin);
     }
 }
+
+#[derive(Component)]
+pub struct Selected;
+
 //struct PlayerCamera {
 //    #[bundle]
 //    cam: PerspectiveCameraBundle,

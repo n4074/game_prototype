@@ -17,7 +17,7 @@ use bevy_prototype_lyon::prelude::*;
 pub struct GridPlugin;
 
 impl Plugin for GridPlugin {
-    fn build(&self, app: &mut AppBuilder) {
+    fn build(&self, app: &mut App) {
         app.add_asset::<OverlayShading>()
             .add_plugin(ShapePlugin)
             .add_startup_system(setup.system());
@@ -64,12 +64,11 @@ fn setup(
     let mut stroke = StrokeOptions::default();
     stroke.line_width = 0.5;
 
-
     let shape_bundle = GeometryBuilder::build_as(
         &shape,
         ShapeColors::outlined(Color::GREEN, Color::BLACK),
         DrawMode::Stroke(stroke),
-        Transform::from_xyz(0.0, 2.0, 0.0)
+        Transform::from_xyz(0.0, 2.0, 0.0),
     );
 
     commands
@@ -86,5 +85,4 @@ fn setup(
             ..Default::default()
         })
         .insert(material);
-
 }

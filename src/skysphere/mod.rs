@@ -12,7 +12,7 @@ use bevy::{
 pub struct SkySpherePlugin;
 
 impl Plugin for SkySpherePlugin {
-    fn build(&self, app: &mut AppBuilder) {
+    fn build(&self, app: &mut App) {
         app.add_startup_system(setup.system())
             .add_asset::<SkySphere>();
     }

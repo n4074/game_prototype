@@ -23,7 +23,7 @@ use bevy::{
 pub struct ToonPlugin;
 
 impl Plugin for ToonPlugin {
-    fn build(&self, app: &mut AppBuilder) {
+    fn build(&self, app: &mut App) {
         app.add_asset::<Toon>().add_startup_system(setup.system());
     }
 }

@@ -43,11 +43,11 @@ pub fn spawn_station(
 
     //commands.spawn_bundle(MeshBundle {});
     commands
-        .spawn_bundle(MeshBundle {
+        .spawn_bundle(MaterialMeshBundle {
             mesh: station_handle,
-            render_pipelines: RenderPipelines::from_handles(&[
-                crate::materials::toon::TOON_PIPELINE_HANDLE.typed(),
-            ]),
+            //render_pipelines: RenderPipelines::from_handles(&[
+            //    crate::materials::toon::TOON_PIPELINE_HANDLE.typed(),
+            //]),
             ..Default::default()
         })
         .insert(color.add(ColorMaterial {

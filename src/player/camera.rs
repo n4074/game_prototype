@@ -4,14 +4,13 @@ use bevy::{
     input::mouse::MouseButton, prelude::*, render::camera::Camera,
     render::camera::PerspectiveProjection,
 };
-use bevy_inspector_egui::{Inspectable, InspectableRegistry};
 
 use crate::SystemLabels;
 //use log::debug;
 pub struct CameraControlPlugin;
 
 impl Plugin for CameraControlPlugin {
-    fn build(&self, app: &mut AppBuilder) {
+    fn build(&self, app: &mut App) {
         app.add_startup_system(setup.system())
             .add_system(
                 camera_movement
@@ -19,17 +18,12 @@ impl Plugin for CameraControlPlugin {
                     .label(SystemLabels::Camera)
                     .after(SystemLabels::Input),
             )
-            .add_system(mouseray_system.system().after(SystemLabels::Input));
-
-        let mut registry = app
-            .world_mut()
-            .get_resource_or_insert_with(InspectableRegistry::default);
-
-        // registering custom component to be able to edit it in inspector
-        registry.register::<CameraController>();
+            .add_system(mouseray_system.system().after(SystemLabels::Input))
+            .register_type::<CameraController>();
     }
 }
-#[derive(Inspectable)]
+#[derive(Component, Reflect)]
+#[reflect(Component)]
 pub struct CameraController {
     _sensitivity: f32,
     pub radius: f32,
@@ -80,8 +74,8 @@ fn setup(mut commands: Commands, mut inputmap: ResMut<crate::input::MappedInput>
             ..Default::default()
         })
         .insert(CameraController::default())
-        .insert(Option::<MouseRay>::default())
-        .insert(Option::<ControlCursor>::default());
+        .insert(MouseRayComponent::default())
+        .insert(ControlCursor::default());
 
     inputmap.bind([KeyCode::A], Pan::Left);
     inputmap.bind([KeyCode::D], Pan::Right);
@@ -240,9 +234,9 @@ fn camera_movement(
 /// within the game world, both as a ray from the near to
 /// far fields, and as a point representing the intersection of that
 /// ray with the control plane
-#[derive(Default)]
+#[derive(Component, Default)]
 pub struct ControlCursor {
-    pub pos: Vec3,
+    pub pos: Option<Vec3>,
 }
 
 #[derive(Debug, Default, Copy, Clone)]
@@ -251,19 +245,24 @@ pub struct MouseRay {
     pub far: Vec3,
     pub direction: Vec3,
 }
+#[derive(Component, Debug, Default, Copy, Clone)]
+pub struct MouseRayComponent(pub Option<MouseRay>);
 
 fn mouseray_system(
+    mut commands: Commands,
     windows: Res<Windows>,
     mut query: Query<(
+        Entity,
         &Camera,
         &GlobalTransform,
         &CameraController,
-        &mut Option<MouseRay>,
-        &mut Option<ControlCursor>,
+        &mut MouseRayComponent,
+        &mut ControlCursor,
     )>,
     mut lines: ResMut<bevy_prototype_debug_lines::DebugLines>,
 ) {
-    for (camera, camera_transform, controller, mut mouseray, mut cursor) in query.iter_mut() {
+    for (entity, camera, camera_transform, controller, mut mouseray, mut cursor) in query.iter_mut()
+    {
         let window = windows.get(camera.window);
         let cursor_position = window.and_then(|w| w.cursor_position());
 
@@ -292,7 +291,8 @@ fn mouseray_system(
                 direction,
             };
 
-            let _ = mouseray.insert(ray);
+            //let _ = mouseray.insert(ray);
+            mouseray.0 = Some(ray);
 
             let d = (-ray.direction).dot(Vec3::Y);
 
@@ -307,7 +307,7 @@ fn mouseray_system(
 
             let pos = ray.near + ray.direction * t;
 
-            let _ = cursor.insert(ControlCursor { pos });
+            cursor.pos = Some(pos);
 
             lines.line(pos - Vec3::X - Vec3::Z, pos + Vec3::X + Vec3::Z, 1.0);
             lines.line(pos - Vec3::Z + Vec3::X, pos + Vec3::Z - Vec3::X, 1.0);
